@@ -4,11 +4,21 @@
     <meta charset="UTF-8">
     <title>(주)쎄니트 의령본사 인사관리시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // ==========================================
+        // 🛠️ [중요] 구글 앱스 스크립트 웹앱 URL 입력부 (가장 상단 배치)
+        // ==========================================
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycby6gsUkybM2_oFKEM-S1A0xn6fzawZngR4ioputtDqSNv8thA8e7HAIpPV7nit_tPzi/exec"; 
+    </script>
     <style>
         #loginOverlay { display: flex; }
         #loginOverlay.hidden { display: none !important; }
         #hrModal { display: none; }
         #hrModal.show { display: flex !important; }
+        #loadingModal { display: none; }
+        #loadingModal.show { display: flex !important; }
+        #customAlertModal { display: none; }
+        #customAlertModal.show { display: flex !important; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .tab-btn.active { border-bottom-color: #2563eb; color: #2563eb; font-weight: 800; }
@@ -17,7 +27,7 @@
 <body class="bg-slate-50 p-8 text-slate-800 font-sans relative min-h-screen">
 
 <!-- 로그인 화면 오버레이 -->
-<div id="loginOverlay" class="fixed inset-0 bg-slate-900/80 z-[99999] backdrop-blur-md items-center justify-center p-4">
+<div id="loginOverlay" class="fixed inset-0 bg-slate-900/80 z-[99999] backdrop-blur-md flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl text-center">
         <h2 class="text-2xl font-black text-slate-900 mb-2">(주)쎄니트 의령본사</h2>
         <p class="text-xs text-slate-400 mb-6 font-bold">관리팀 통합 DB 로그인</p>
@@ -26,6 +36,23 @@
             <div><label class="block text-xs font-bold text-slate-500 mb-1">Password</label><input type="password" id="loginPw" class="w-full border border-slate-200 rounded-xl px-4 py-3 outline-none text-sm" autocomplete="off"></div>
         </div>
         <button onclick="handleLogin()" id="loginBtn" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm shadow-md hover:bg-blue-700 transition">로그인</button>
+    </div>
+</div>
+
+<!-- 작업 중 로딩 모달 ('저장 중...' 표시) -->
+<div id="loadingModal" class="fixed inset-0 bg-slate-950/60 z-[999999] backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white px-8 py-6 rounded-3xl shadow-2xl flex items-center gap-4">
+        <div class="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <p id="loadingText" class="text-sm font-bold text-slate-800">저장 중...</p>
+    </div>
+</div>
+
+<!-- 커스텀 System Message 알림 모달 -->
+<div id="customAlertModal" class="fixed inset-0 bg-slate-950/60 z-[999999] backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
+        <p class="text-xs font-black text-blue-600 tracking-wider mb-1">System Message</p>
+        <p id="alertMessageText" class="text-sm font-bold text-slate-800 my-4">메시지 내용</p>
+        <button onclick="closeCustomAlert()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-xs hover:bg-slate-800 transition">확인</button>
     </div>
 </div>
 
@@ -158,7 +185,7 @@
             <div><label class="block text-xs font-semibold mb-1">부서</label><input type="text" id="fDept" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div><label class="block text-xs font-semibold mb-1">공정</label><input type="text" id="fProcess" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div><label class="block text-xs font-semibold mb-1">직위</label><input type="text" id="fRank" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
-            <div><label class="block text-xs font-semibold mb-1">주민등록번호</label><input type="text" id="fRegNo" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="000000-0000000"></div>
+            <div><label class="block text-xs font-semibold mb-1">주민등록번호/외국인등록번호</label><input type="text" id="fRegNo" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="000000-0000000"></div>
             <div><label class="block text-xs font-semibold mb-1">입사일</label><input type="date" id="fDate" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div><label class="block text-xs font-semibold mb-1">재직상태</label><select id="fStatus" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white"><option value="재직">재직</option><option value="퇴사">퇴사</option></select></div>
             <div><label class="block text-xs font-semibold mb-1">급여형태</label><input type="text" id="fSalaryType" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="시급제/연봉제"></div>
@@ -171,7 +198,6 @@
 </div>
 
 <script>
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzzMe5FsQOtbfBil_oLVdtXnZko2eQAgYWmc5rp7e3yAFAjyHOiGcPssyHU-iF3PmR1/exec"; // 본인의 웹앱 URL 입력
     let dbData = { employees: [], salary: [], vacation: [], discipline: [] };
     let isMasked = true;
 
@@ -184,28 +210,45 @@
         }
     };
 
+    function showLoading(text) {
+        document.getElementById('loadingText').innerText = text || "저장 중...";
+        document.getElementById('loadingModal').classList.add('show');
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingModal').classList.remove('show');
+    }
+
+    function showCustomAlert(msg) {
+        document.getElementById('alertMessageText').innerText = msg;
+        document.getElementById('customAlertModal').classList.add('show');
+    }
+
+    function closeCustomAlert() {
+        document.getElementById('customAlertModal').classList.remove('show');
+    }
+
     async function handleLogin() {
         const id = document.getElementById('loginId').value.trim();
         const pw = document.getElementById('loginPw').value.trim();
-        const btn = document.getElementById('loginBtn');
-        if(!id || !pw) return alert('ID와 Password를 입력해주세요.');
+        if(!id || !pw) return showCustomAlert('ID와 Password를 입력해주세요.');
 
-        btn.innerText = "로그인 중...";
+        showLoading("로그인 확인 중...");
         try {
             const res = await fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "login", id, pw }) });
             const result = await res.json();
+            hideLoading();
             if(result.success) {
                 localStorage.setItem('cenit_logged_user', id);
                 document.getElementById('loginOverlay').classList.add('hidden');
                 document.getElementById('currentUserDisplay').innerText = `👤 접속자: ${id} 님`;
                 fetchAllData();
             } else {
-                alert('ID 또는 Password가 일치하지 않습니다.');
-                btn.innerText = "로그인";
+                showCustomAlert('ID 또는 Password가 일치하지 않습니다.');
             }
         } catch(e) {
-            alert('통신 오류가 발생했습니다.');
-            btn.innerText = "로그인";
+            hideLoading();
+            showCustomAlert('통신 오류가 발생했습니다.');
         }
     }
 
@@ -217,11 +260,14 @@
     }
 
     async function fetchAllData() {
+        showLoading("데이터 동기화 중...");
         try {
             const res = await fetch(GAS_API_URL);
             dbData = await res.json();
+            hideLoading();
             renderAllTables();
         } catch(e) {
+            hideLoading();
             console.error(e);
         }
     }
@@ -391,7 +437,10 @@
             급여형태: document.getElementById('fSalaryType').value
         };
 
-        if(!empData.사번 || !empData["성명(한글)"]) return alert("사번과 성명(한글)은 필수 입력 항목입니다.");
+        if(!empData.사번 || !empData["성명(한글)"]) return showCustomAlert("사번과 성명(한글)은 필수 입력 항목입니다.");
+
+        closeForm();
+        showLoading("저장 중...");
 
         try {
             const res = await fetch(GAS_API_URL, {
@@ -399,15 +448,16 @@
                 body: JSON.stringify({ action: "saveEmployee", data: empData })
             });
             const result = await res.json();
+            hideLoading();
             if(result.success) {
-                alert('성공적으로 저장되었습니다.');
-                closeForm();
+                showCustomAlert('성공적으로 저장되었습니다.');
                 fetchAllData();
             } else {
-                alert('저장 실패: ' + result.error);
+                showCustomAlert('저장 실패: ' + result.error);
             }
         } catch(e) {
-            alert('통신 중 오류가 발생했습니다.');
+            hideLoading();
+            showCustomAlert('통신 중 오류가 발생했습니다.');
         }
     }
 </script>
