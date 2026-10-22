@@ -1,202 +1,242 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>(주)쎄니트 철강사업부 - HRIS 웹보드</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <title>(주)쎄니트 의령본사 인사관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #loginOverlay { display: flex; }
+        #loginOverlay.hidden { display: none !important; }
+        #hrModal { display: none; }
+        #hrModal.show { display: flex !important; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-btn.active { border-bottom-color: #2563eb; color: #2563eb; font-weight: 800; }
+    </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans">
+<body class="bg-slate-50 p-8 text-slate-800 font-sans">
 
-  <!-- 상단 네비게이션 -->
-  <header class="bg-slate-900 text-white shadow-md">
-    <div class="max-w-7xl mx-mx auto px-6 py-4 flex justify-between items-center">
-      <div class="flex items-center space-x-3">
-        <i class="fa-solid me-2 fa-building-user text-blue-400 text-2xl"></i>
-        <h1 class="text-xl font-bold tracking-wide">(주)쎄니트 의령본사 인사관리시스템</h1>
-      </div>
-      <div class="text-sm text-slate-400">
-        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-2"></span>관리팀 전용
-      </div>
-    </div>
-  </header>
-
-  <div class="max-w-7xl mx-auto px-6 py-8">
-    <!-- 탭 메뉴 -->
-    <div class="flex space-x-2 border-b border-slate-300 mb-6">
-      <button onclick="switchTab('직원명부')" id="tab-직원명부" class="tab-btn px-5 py-3 font-semibold text-blue-600 border-b-2 border-blue-600 focus:outline-none flex items-center gap-2">
-        <i class="fa-solid fa-users"></i> 직원명부
-      </button>
-      <button onclick="switchTab('급여관리')" id="tab-급여관리" class="tab-btn px-5 py-3 font-semibold text-slate-500 hover:text-slate-800 focus:outline-none flex items-center gap-2">
-        <i class="fa-solid fa-file-invoice-dollar"></i> 급여관리
-      </button>
-      <button onclick="switchTab('휴가관리')" id="tab-휴가관리" class="tab-btn px-5 py-3 font-semibold text-slate-500 hover:text-slate-800 focus:outline-none flex items-center gap-2">
-        <i class="fa-solid fa-calendar-check"></i> 휴가관리
-      </button>
-      <button onclick="switchTab('징계/포상')" id="tab-징계/포상" class="tab-btn px-5 py-3 font-semibold text-slate-500 hover:text-slate-800 focus:outline-none flex items-center gap-2">
-        <i class="fa-solid fa-award"></i> 징계/포상
-      </button>
-    </div>
-
-    <!-- 컨트롤 바 (검색 및 마스킹 토글) -->
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap justify-between items-center gap-4">
-      <div class="flex items-center gap-3">
-        <div class="relative">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-          <input type="text" id="searchInput" onkeyup="filterData()" placeholder="사번, 성명, 부서 검색..." class="pl-9 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm w-64">
+<!-- 로그인 화면 오버레이 -->
+<div id="loginOverlay" class="fixed inset-0 bg-slate-900/80 z-[99999] backdrop-blur-md items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl text-center">
+        <h2 class="text-2xl font-black text-slate-900 mb-2">(주)쎄니트 의령본사</h2>
+        <p class="text-xs text-slate-400 mb-6 font-bold">관리팀 통합 DB 로그인 (권한관리 연동)</p>
+        <div class="space-y-4 text-left mb-6">
+            <div><label class="block text-xs font-bold text-slate-500 mb-1">아이디 (성함)</label><input type="text" id="loginId" class="w-full border border-slate-200 rounded-xl px-4 py-3 outline-none text-sm" placeholder="예: 한창석"></div>
+            <div><label class="block text-xs font-bold text-slate-500 mb-1">비밀번호</label><input type="password" id="loginPw" class="w-full border border-slate-200 rounded-xl px-4 py-3 outline-none text-sm" placeholder="비밀번호 입력"></div>
         </div>
-        <button onclick="loadData()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition">
-          <i class="fa-solid fa-rotate-right mr-1"></i> 새로고침
-        </button>
-      </div>
+        <button onclick="handleLogin()" id="loginBtn" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm shadow-md hover:bg-blue-700 transition">시스템 접속</button>
+    </div>
+</div>
 
-      <!-- 마스킹 온오프 토글 버튼 -->
-      <div id="maskingControl" class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-        <span class="text-xs font-semibold text-slate-600">주민/외국인번호 마스킹:</span>
-        <button id="maskBtn" onclick="toggleMasking()" class="px-3 py-1 bg-rose-500 text-white text-xs font-bold rounded shadow-sm hover:bg-rose-600 transition flex items-center gap-1">
-          <i class="fa-solid fa-eye-slash"></i> <span id="maskBtnText">보안 적용 (ON)</span>
-        </button>
-      </div>
+<div class="max-w-[1500px] mx-auto">
+    <header class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-600">🏢 (주)쎄니트 의령본사 인사관리시스템</h1>
+            <p class="text-slate-500 mt-1 font-medium text-sm">철강사업부 관리팀 전용 실시간 인력 및 노무관리 플랫폼</p>
+        </div>
+        <div class="flex gap-2 items-center">
+            <span id="currentUserDisplay" class="text-xs font-bold text-slate-600 bg-white px-3 py-2 rounded-xl border border-slate-200"></span>
+            <button onclick="fetchData()" class="bg-slate-200 text-slate-700 px-4 py-3 rounded-2xl font-bold hover:bg-slate-300 transition-all text-xs">🔄 새로고침</button>
+            <button onclick="openForm(-1)" class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-blue-700 shadow-md transition-all text-sm">+ 신규 입사자 등록</button>
+        </div>
+    </header>
+
+    <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex gap-2">
+            <button onclick="switchTab('emp')" id="btn-emp" class="tab-btn active px-6 py-2 border-b-4 border-transparent text-slate-500 font-bold text-sm">직원명부</button>
+            <button onclick="switchTab('salary')" id="btn-salary" class="tab-btn px-6 py-2 border-b-4 border-transparent text-slate-500 font-bold text-sm">급여관리</button>
+        </div>
+        <div>
+            <button onclick="toggleMask()" id="maskBtn" class="bg-rose-600 text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm">🔒 보안 적용 (ON)</button>
+        </div>
     </div>
 
-    <!-- 데이터 테이블 영역 -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm text-slate-600">
-          <thead id="tableHeader" class="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
-            <!-- Dynamic Header -->
-          </thead>
-          <tbody id="tableBody" class="divide-y divide-slate-100">
-            <tr>
-              <td colspan="10" class="text-center py-12 text-slate-400">
-                <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 block"></i> 데이터를 불러오는 중입니다...
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <!-- 직원명부 탭 -->
+    <div id="tab-emp" class="tab-content active">
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-slate-900 text-white text-xs font-bold text-center">
+                    <tr>
+                        <th class="p-4">사번</th>
+                        <th class="p-4">부서</th>
+                        <th class="p-4">직위</th>
+                        <th class="p-4">성명</th>
+                        <th class="p-4">주민등록번호</th>
+                        <th class="p-4">입사일</th>
+                        <th class="p-4">관리</th>
+                    </tr>
+                </thead>
+                <tbody id="empTableBody" class="divide-y divide-slate-100 text-sm font-medium text-slate-700 text-center"></tbody>
+            </table>
+        </div>
     </div>
-  </div>
+</div>
 
-  <script>
-    // ---------------------------------------------------------------- //
-    // ★ 1단계에서 복사한 앱스 스크립트 웹앱 URL을 아래에 넣으세요 ★
-    const API_URL = "https://script.google.com/macros/s/AKfycbz2ds7Fl-0QYqSq7P3RiYrOMrBovuvIgC8dpZNbBranfEONVj_44A2Up3V5KA4fxxlu/exec"; 
-    // ---------------------------------------------------------------- //
+<!-- 정보 입력/수정 모달 -->
+<div id="hrModal" class="fixed inset-0 bg-slate-900/60 z-[9999] backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl">
+        <h3 id="formTitle" class="text-2xl font-bold mb-6 text-slate-900">직원 정보 입력</h3>
+        <div class="space-y-4">
+            <div><label class="block text-xs font-semibold mb-1">사번</label><input type="text" id="fId" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
+            <div><label class="block text-xs font-semibold mb-1">부서</label><input type="text" id="fDept" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
+            <div><label class="block text-xs font-semibold mb-1">직위</label><input type="text" id="fRank" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
+            <div><label class="block text-xs font-semibold mb-1">성명</label><input type="text" id="fName" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
+            <div><label class="block text-xs font-semibold mb-1">주민등록번호</label><input type="text" id="fRegNo" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="000000-0000000"></div>
+            <div><label class="block text-xs font-semibold mb-1">입사일</label><input type="date" id="fDate" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
+        </div>
+        <div class="flex gap-3 mt-6">
+            <button onclick="closeForm()" class="flex-1 py-3 font-bold text-slate-500 hover:bg-slate-100 rounded-xl text-xs">취소</button>
+            <button onclick="saveEmployeeData()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-md hover:bg-blue-700 text-xs">저장하기</button>
+        </div>
+    </div>
+</div>
 
-    let currentTab = "직원명부";
-    let rawData = [];
-    let isMasked = true; // 기본 마스킹 ON
+<script>
+    const GAS_API_URL = "YOUR_GAS_WEB_APP_URL_HERE"; // 본인의 웹앱 URL 입력
+    let employees = [];
+    let isMasked = true;
 
-    window.onload = function() {
-      loadData();
-    };
+    async function handleLogin() {
+        const id = document.getElementById('loginId').value.trim();
+        const pw = document.getElementById('loginPw').value.trim();
+        const btn = document.getElementById('loginBtn');
+        if(!id || !pw) return alert('아이디와 비밀번호를 입력해주세요.');
 
-    function switchTab(tabName) {
-      currentTab = tabName;
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
-        btn.classList.add('text-slate-500');
-      });
-      document.getElementById(`tab-${tabName}`).classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
-      document.getElementById(`tab-${tabName}`).classList.remove('text-slate-500');
-
-      // 직원명부일 때만 마스킹 토글 표시
-      document.getElementById('maskingControl').style.display = (tabName === '직원명부') ? 'flex' : 'none';
-
-      loadData();
+        btn.innerText = "로그인 확인 중...";
+        try {
+            const res = await fetch(GAS_API_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "login", id, pw })
+            });
+            const result = await res.json();
+            if(result.success) {
+                document.getElementById('loginOverlay').classList.add('hidden');
+                document.getElementById('currentUserDisplay').innerText = `👤 접속자: ${id} 님`;
+                fetchData();
+            } else {
+                alert('아이디 또는 비밀번호가 일치하지 않습니다.');
+                btn.innerText = "시스템 접속";
+            }
+        } catch(e) {
+            alert('서버 통신 중 오류가 발생했습니다.');
+            btn.innerText = "시스템 접속";
+        }
     }
 
-    function loadData() {
-      const tbody = document.getElementById('tableBody');
-      tbody.innerHTML = `<tr><td colspan="10" class="text-center py-12 text-slate-400"><i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 block"></i> ${currentTab} 불러오는 중...</td></tr>`;
+    async function fetchData() {
+        try {
+            const res = await fetch(GAS_API_URL);
+            const data = await res.json();
+            employees = data.employees || [];
+            renderTable();
+        } catch(e) {
+            console.error(e);
+        }
+    }
 
-      fetch(`${API_URL}?sheet=${encodeURIComponent(currentTab)}`)
-        .then(res => res.json())
-        .then(res => {
-          if (res.status === 'success') {
-            rawData = res.data;
-            renderTable(rawData);
-          } else {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center py-8 text-rose-500">오류 발생: ${res.message}</td></tr>`;
-          }
-        })
-        .catch(err => {
-          tbody.innerHTML = `<tr><td colspan="10" class="text-center py-8 text-rose-500">통신 오류가 발생했습니다. API URL을 확인하세요.</td></tr>`;
+    function renderTable() {
+        const tbody = document.getElementById('empTableBody');
+        tbody.innerHTML = '';
+        if(employees.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-slate-400">등록된 데이터가 없습니다.</td></tr>`;
+            return;
+        }
+        employees.forEach((emp, idx) => {
+            let regNo = emp.주민등록번호 || emp.regNo || "-";
+            if(isMasked && regNo !== "-" && regNo.length >= 8) {
+                regNo = regNo.substring(0, 8) + "******";
+            }
+            tbody.innerHTML += `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-4 font-bold">${emp.사번 || '-'}</td>
+                    <td class="p-4 text-slate-500">${emp.부서 || '-'}</td>
+                    <td class="p-4">${emp.직위 || '-'}</td>
+                    <td class="p-4 font-bold text-slate-900">${emp.성명 || '-'}</td>
+                    <td class="p-4 font-mono">${regNo}</td>
+                    <td class="p-4 text-xs text-slate-500">${String(emp.입사일 || '').split('T')[0]}</td>
+                    <td class="p-4">
+                        <button onclick="openForm(${idx})" class="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold">수정</button>
+                    </td>
+                </tr>`;
         });
     }
 
-    function renderTable(data) {
-      const thead = document.getElementById('tableHeader');
-      const tbody = document.getElementById('tableBody');
-
-      if (data.length === 0) {
-        thead.innerHTML = '';
-        tbody.innerHTML = `<tr><td colspan="10" class="text-center py-8 text-slate-400">등록된 데이터가 없습니다.</td></tr>`;
-        return;
-      }
-
-      // 동적 헤더 생성
-      const headers = Object.keys(data[0]);
-      thead.innerHTML = `<tr>${headers.map(h => `<th class="px-4 py-3 bg-slate-100">${h}</th>`).join('')}</tr>`;
-
-      // 동적 행 생성
-      tbody.innerHTML = data.map(row => {
-        return `<tr class="hover:bg-slate-50 transition">${headers.map(h => {
-          let val = row[h] !== undefined ? row[h] : '';
-          
-          // 주민/외국인등록번호 마스킹 처리
-          if (h.includes('주민등록번호') || h.includes('외국인등록번호')) {
-            val = maskIdNumber(val, isMasked);
-          }
-          return `<td class="px-4 py-3 border-t border-slate-100">${val}</td>`;
-        }).join('')}</tr>`;
-      }).join('');
-    }
-
-    function maskIdNumber(str, masked) {
-      if (!str) return '';
-      const cleanStr = String(str).trim();
-      if (!masked) return cleanStr; // Off일 때는 원본
-      
-      // 앞 6자리-뒷자리 가리기
-      if (cleanStr.includes('-')) {
-        const parts = cleanStr.split('-');
-        return `${parts[0]}-${parts[1].substring(0,1)}******`;
-      } else if (cleanStr.length >= 13) {
-        return `${cleanStr.substring(0,6)}-${cleanStr.substring(6,7)}******`;
-      }
-      return cleanStr;
-    }
-
-    function toggleMasking() {
-      if (isMasked) {
-        const password = prompt("보안 해제를 위해 관리자 비밀번호를 입력하세요:");
-        if (password === "1234") { // 실무용 비밀번호 설정 가능
-          isMasked = false;
-          document.getElementById('maskBtn').classList.replace('bg-rose-500', 'bg-emerald-500');
-          document.getElementById('maskBtnText').innerText = "보안 해제됨 (OFF)";
-        } else if (password !== null) {
-          alert("비밀번호가 올바르지 않습니다.");
+    function toggleMask() {
+        isMasked = !isMasked;
+        const btn = document.getElementById('maskBtn');
+        if(isMasked) {
+            btn.className = "bg-rose-600 text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm";
+            btn.innerText = "🔒 보안 적용 (ON)";
+        } else {
+            btn.className = "bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm";
+            btn.innerText = "🔓 보안 해제 (OFF)";
         }
-      } else {
-        isMasked = true;
-        document.getElementById('maskBtn').classList.replace('bg-emerald-500', 'bg-rose-500');
-        document.getElementById('maskBtnText').innerText = "보안 적용 (ON)";
-      }
-      renderTable(rawData);
+        renderTable();
     }
 
-    function filterData() {
-      const q = document.getElementById('searchInput').value.toLowerCase();
-      const filtered = rawData.filter(row => {
-        return Object.values(row).some(val => String(val).toLowerCase().includes(q));
-      });
-      renderTable(filtered);
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        document.getElementById('btn-' + tab).classList.add('active');
     }
-  </script>
+
+    function openForm(idx) {
+        document.getElementById('hrModal').classList.add('show');
+        if(idx === -1) {
+            document.getElementById('formTitle').innerText = "신규 입사자 등록";
+            document.getElementById('fId').value = "";
+            document.getElementById('fDept').value = "";
+            document.getElementById('fRank').value = "";
+            document.getElementById('fName').value = "";
+            document.getElementById('fRegNo').value = "";
+            document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('fId').disabled = false;
+        } else {
+            const e = employees[idx];
+            document.getElementById('formTitle').innerText = `${e.성명} 정보 수정`;
+            document.getElementById('fId').value = e.사번 || "";
+            document.getElementById('fDept').value = e.부서 || "";
+            document.getElementById('fRank').value = e.직위 || "";
+            document.getElementById('fName').value = e.성명 || "";
+            document.getElementById('fRegNo').value = e.주민등록번호 || "";
+            document.getElementById('fDate').value = String(e.입사일 || '').split('T')[0];
+            document.getElementById('fId').disabled = true; // 사번은 키값으로 고정
+        }
+    }
+
+    function closeForm() { document.getElementById('hrModal').classList.remove('show'); }
+
+    async function saveEmployeeData() {
+        const empData = {
+            사번: document.getElementById('fId').value,
+            부서: document.getElementById('fDept').value,
+            직위: document.getElementById('fRank').value,
+            성명: document.getElementById('fName').value,
+            주민등록번호: document.getElementById('fRegNo').value,
+            입사일: document.getElementById('fDate').value
+        };
+
+        if(!empData.사번 || !empData.성명) return alert("사번과 성명은 필수 입력 항목입니다.");
+
+        try {
+            const res = await fetch(GAS_API_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "saveEmployee", data: empData })
+            });
+            const result = await res.json();
+            if(result.success) {
+                alert('성공적으로 저장되었습니다.');
+                closeForm();
+                fetchData();
+            } else {
+                alert('저장 실패: ' + result.error);
+            }
+        } catch(e) {
+            alert('통신 중 오류가 발생했습니다.');
+        }
+    }
+</script>
 </body>
 </html>
