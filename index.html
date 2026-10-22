@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>(주)쎄니트 의령본사 인사관리시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         #loginOverlay { display: flex; }
         #loginOverlay.hidden { display: none !important; }
@@ -20,12 +21,12 @@
 <div id="loginOverlay" class="fixed inset-0 bg-slate-900/80 z-[99999] backdrop-blur-md items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl text-center">
         <h2 class="text-2xl font-black text-slate-900 mb-2">(주)쎄니트 의령본사</h2>
-        <p class="text-xs text-slate-400 mb-6 font-bold">관리팀 통합 DB 로그인 (권한관리 연동)</p>
+        <p class="text-xs text-slate-400 mb-6 font-bold">관리팀 통합 DB 로그인</p>
         <div class="space-y-4 text-left mb-6">
-            <div><label class="block text-xs font-bold text-slate-500 mb-1">아이디 (성함)</label><input type="text" id="loginId" class="w-full border border-slate-200 rounded-xl px-4 py-3 outline-none text-sm" placeholder="예: 한창석"></div>
-            <div><label class="block text-xs font-bold text-slate-500 mb-1">비밀번호</label><input type="password" id="loginPw" class="w-full border border-slate-200 rounded-xl px-4 py-3 outline-none text-sm" placeholder="비밀번호 입력"></div>
+            <div><label class="block text-xs font-bold text-slate-500 mb-1">ID</label><input type="text" id="loginId" class="w-full border border-slate-200 rounded-xl px-4 py-3 outline-none text-sm" autocomplete="off"></div>
+            <div><label class="block text-xs font-bold text-slate-500 mb-1">Password</label><input type="password" id="loginPw" class="w-full border border-slate-200 rounded-xl px-4 py-3 outline-none text-sm" autocomplete="off"></div>
         </div>
-        <button onclick="handleLogin()" id="loginBtn" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm shadow-md hover:bg-blue-700 transition">시스템 접속</button>
+        <button onclick="handleLogin()" id="loginBtn" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold text-sm shadow-md hover:bg-blue-700 transition">로그인</button>
     </div>
 </div>
 
@@ -36,9 +37,10 @@
             <p class="text-slate-500 mt-1 font-medium text-sm">철강사업부 관리팀 전용 실시간 인력 및 노무관리 플랫폼</p>
         </div>
         <div class="flex gap-2 items-center">
-            <span id="currentUserDisplay" class="text-xs font-bold text-slate-600 bg-white px-3 py-2 rounded-xl border border-slate-200"></span>
+            <span id="currentUserDisplay" class="text-xs font-bold text-slate-600 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm"></span>
             <button onclick="fetchData()" class="bg-slate-200 text-slate-700 px-4 py-3 rounded-2xl font-bold hover:bg-slate-300 transition-all text-xs">🔄 새로고침</button>
             <button onclick="openForm(-1)" class="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-blue-700 shadow-md transition-all text-sm">+ 신규 입사자 등록</button>
+            <button onclick="handleLogout()" class="bg-rose-100 text-rose-700 px-4 py-3 rounded-2xl font-bold hover:bg-rose-200 transition-all text-xs">🚪 로그아웃</button>
         </div>
     </header>
 
@@ -71,6 +73,13 @@
             </table>
         </div>
     </div>
+
+    <!-- 급여관리 탭 -->
+    <div id="tab-salary" class="tab-content">
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 text-center text-slate-400">
+            급여관리 데이터 연동 영역입니다.
+        </div>
+    </div>
 </div>
 
 <!-- 정보 입력/수정 모달 -->
@@ -93,17 +102,27 @@
 </div>
 
 <script>
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxnHZeciM4FqmXV9FIat_luOxQ8XWLYIemwsvBWjcrzdBcqX0cIRlF-VwDwc9Qmsr0e/exec"; // 본인의 웹앱 URL 입력
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxnHZeciM4FqmXV9FIat_luOxQ8XWLYIemwsvBWjcrzdBcqX0cIRlF-VwDwc9Qmsr0e/exec"; // 본인의 앱스 스크립트 웹앱 URL 입력
     let employees = [];
     let isMasked = true;
+
+    // 페이지 로드 시 기존 로그인 세션 체크
+    window.onload = function() {
+        const savedUser = localStorage.getItem('cenit_logged_user');
+        if(savedUser) {
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('currentUserDisplay').innerText = `👤 접속자: ${savedUser} 님`;
+            fetchData();
+        }
+    };
 
     async function handleLogin() {
         const id = document.getElementById('loginId').value.trim();
         const pw = document.getElementById('loginPw').value.trim();
         const btn = document.getElementById('loginBtn');
-        if(!id || !pw) return alert('아이디와 비밀번호를 입력해주세요.');
+        if(!id || !pw) return alert('ID와 Password를 입력해주세요.');
 
-        btn.innerText = "로그인 확인 중...";
+        btn.innerText = "로그인 중...";
         try {
             const res = await fetch(GAS_API_URL, {
                 method: "POST",
@@ -111,17 +130,26 @@
             });
             const result = await res.json();
             if(result.success) {
+                localStorage.setItem('cenit_logged_user', id);
                 document.getElementById('loginOverlay').classList.add('hidden');
                 document.getElementById('currentUserDisplay').innerText = `👤 접속자: ${id} 님`;
                 fetchData();
             } else {
-                alert('아이디 또는 비밀번호가 일치하지 않습니다.');
-                btn.innerText = "시스템 접속";
+                alert('ID 또는 Password가 일치하지 않습니다.');
+                btn.innerText = "로그인";
             }
         } catch(e) {
             alert('서버 통신 중 오류가 발생했습니다.');
-            btn.innerText = "시스템 접속";
+            btn.innerText = "로그인";
         }
+    }
+
+    function handleLogout() {
+        localStorage.removeItem('cenit_logged_user');
+        document.getElementById('loginId').value = "";
+        document.getElementById('loginPw').value = "";
+        document.getElementById('loginBtn').innerText = "로그인";
+        document.getElementById('loginOverlay').classList.remove('hidden');
     }
 
     async function fetchData() {
@@ -202,7 +230,7 @@
             document.getElementById('fName').value = e.성명 || "";
             document.getElementById('fRegNo').value = e.주민등록번호 || "";
             document.getElementById('fDate').value = String(e.입사일 || '').split('T')[0];
-            document.getElementById('fId').disabled = true; // 사번은 키값으로 고정
+            document.getElementById('fId').disabled = true;
         }
     }
 
