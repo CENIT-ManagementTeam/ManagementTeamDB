@@ -8,17 +8,13 @@
         // ==========================================
         // 🛠️ [중요] 구글 앱스 스크립트 웹앱 URL 입력부 (맨 상단 위치)
         // ==========================================
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydC_Yh4SEhdtmVGUUq_6dX949PKOKgTOYNTZJtbMJ5zcu4gVkj8KNyXjtcfeSF3MJG/exec"; 
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbykFVb8BqX4d50RKBhqfdgRHZjF-NT2b6tf3WT2hIS3tHBOQdUm40UnkIP4UxoeV5Pr/exec"; 
     </script>
     <style>
         #loginOverlay { display: flex; }
         #loginOverlay.hidden { display: none !important; }
-        #hrModal { display: none; }
-        #hrModal.show { display: flex !important; }
-        #loadingModal { display: none; }
-        #loadingModal.show { display: flex !important; }
-        #customAlertModal { display: none; }
-        #customAlertModal.show { display: flex !important; }
+        .modal-box { display: none; }
+        .modal-box.show { display: flex !important; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .tab-btn.active { border-bottom-color: #2563eb; color: #2563eb; font-weight: 800; }
@@ -40,19 +36,97 @@
 </div>
 
 <!-- 로딩 모달 -->
-<div id="loadingModal" class="fixed inset-0 bg-slate-950/60 z-[999999] backdrop-blur-sm items-center justify-center p-4">
+<div id="loadingModal" class="modal-box fixed inset-0 bg-slate-950/60 z-[999999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white px-8 py-6 rounded-3xl shadow-2xl flex items-center gap-4">
         <div class="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <p id="loadingText" class="text-sm font-bold text-slate-800">저장 중...</p>
+        <p id="loadingText" class="text-sm font-bold text-slate-800">처리 중...</p>
     </div>
 </div>
 
 <!-- 커스텀 System Message 모달 -->
-<div id="customAlertModal" class="fixed inset-0 bg-slate-950/60 z-[999999] backdrop-blur-sm items-center justify-center p-4">
+<div id="customAlertModal" class="modal-box fixed inset-0 bg-slate-950/60 z-[999999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
         <p class="text-xs font-black text-blue-600 tracking-wider mb-1">System Message</p>
         <p id="alertMessageText" class="text-sm font-bold text-slate-800 my-4">메시지 내용</p>
         <button onclick="closeCustomAlert()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-xs hover:bg-slate-800 transition">확인</button>
+    </div>
+</div>
+
+<!-- 상세 필터 팝업 모달 -->
+<div id="filterModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
+        <h3 class="text-xl font-bold mb-4 text-slate-900">🔍 상세 필터 설정</h3>
+        <div class="space-y-4 text-xs font-semibold">
+            <div>
+                <label class="block text-slate-500 mb-1">부서</label>
+                <select id="modalDept" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 outline-none bg-slate-50"><option value="전체">전체</option></select>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1">공정</label>
+                <select id="modalProcess" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 outline-none bg-slate-50"><option value="전체">전체</option></select>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1">직급</label>
+                <select id="modalRank" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 outline-none bg-slate-50"><option value="전체">전체</option></select>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div><label class="block text-slate-500 mb-1">입사일 시작 (YYYY-MM)</label><input type="month" id="modalHireStart" class="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none"></div>
+                <div><label class="block text-slate-500 mb-1">입사일 종료 (YYYY-MM)</label><input type="month" id="modalHireEnd" class="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <div><label class="block text-slate-500 mb-1">퇴사일 시작 (YYYY-MM)</label><input type="month" id="modalResignStart" class="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none"></div>
+                <div><label class="block text-slate-500 mb-1">퇴사일 종료 (YYYY-MM)</label><input type="month" id="modalResignEnd" class="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none"></div>
+            </div>
+            <label class="flex items-center gap-2 cursor-pointer pt-2">
+                <input type="checkbox" id="modalExcludeResigned" class="rounded border-slate-300 text-blue-600" checked>
+                <span class="text-slate-700">재직자만 보기 (퇴사자 제외)</span>
+            </label>
+        </div>
+        <div class="flex gap-2 mt-6">
+            <button onclick="resetFilter()" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-xs">초기화</button>
+            <button onclick="applyFilter()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-xs shadow-md">적용하기</button>
+        </div>
+    </div>
+</div>
+
+<!-- 상세 정렬 팝업 모달 -->
+<div id="sortModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
+        <h3 class="text-xl font-bold mb-4 text-slate-900">📊 정렬 순서 설정</h3>
+        <div class="space-y-3 text-xs font-semibold">
+            <label class="block text-slate-500 mb-1">정렬 기준 선택</label>
+            <select id="modalSortCriteria" class="w-full border border-slate-200 rounded-xl px-3 py-3 outline-none bg-slate-50 text-sm">
+                <option value="name">성명순</option>
+                <option value="dept_process">부서 및 공정 복합순</option>
+                <option value="dept">부서순 단독</option>
+                <option value="process">공정순 단독</option>
+                <option value="rank">직급순</option>
+                <option value="hireDate">입사일순</option>
+                <option value="nationality">국적순</option>
+            </select>
+        </div>
+        <div class="flex gap-2 mt-6">
+            <button onclick="closeModal('sortModal')" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-xs">취소</button>
+            <button onclick="applySort()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-xs shadow-md">정렬 적용</button>
+        </div>
+    </div>
+</div>
+
+<!-- 환경 설정 팝업 모달 -->
+<div id="settingsModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
+        <h3 class="text-xl font-bold mb-4 text-slate-900">⚙️ 시스템 설정 및 항목 관리</h3>
+        <div class="space-y-4 text-xs text-slate-600">
+            <p class="font-medium">현재 연결된 구글 시트 데이터베이스를 기반으로 시스템 항목 및 기준 정보를 관리합니다.</p>
+            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                <p class="font-bold text-slate-800">📌 데이터베이스 연동 안내</p>
+                <p>• 직원명부, 급여관리, 휴가관리, 징계/포상 시트의 3행 헤더를 기준으로 실시간 동기화됩니다.</p>
+                <p>• 권한관리를 통해 로그인 계정 및 암호를 변경할 수 있습니다.</p>
+            </div>
+        </div>
+        <div class="mt-6">
+            <button onclick="closeModal('settingsModal')" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-xs">확인</button>
+        </div>
     </div>
 </div>
 
@@ -84,27 +158,21 @@
 
     <!-- 1. 직원명부 탭 -->
     <div id="tab-emp" class="tab-content active space-y-4">
-        <!-- 필터 및 정렬 바 -->
-        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap justify-between items-center gap-4 text-xs font-semibold">
-            <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2">
-                    <span class="text-slate-500">부서 필터:</span>
-                    <select id="deptFilter" onchange="renderEmpTable()" class="border border-slate-200 rounded-lg px-3 py-1.5 outline-none bg-slate-50">
-                        <option value="전체">전체</option>
-                    </select>
-                </div>
-                <label class="flex items-center gap-1.5 cursor-pointer">
-                    <input type="checkbox" id="excludeResigned" onchange="renderEmpTable()" class="rounded border-slate-300 text-blue-600" checked>
-                    <span class="text-slate-600">퇴사자 제외</span>
-                </label>
-            </div>
+        <!-- 필터, 정렬 버튼 (좌측) 및 설정 버튼 (우측) -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
             <div class="flex items-center gap-2">
-                <span class="text-slate-500">정렬 기준:</span>
-                <select id="sortCriteria" onchange="renderEmpTable()" class="border border-slate-200 rounded-lg px-3 py-1.5 outline-none bg-slate-50">
-                    <option value="name">성명순</option>
-                    <option value="hireDate">입사일순</option>
-                    <option value="empId">사번순</option>
-                </select>
+                <button onclick="openModal('filterModal')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
+                    🔍 필터 ▾
+                </button>
+                <button onclick="openModal('sortModal')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
+                    📊 정렬 ▾
+                </button>
+                <span id="filterStatusBadge" class="text-xs text-slate-400 font-semibold ml-2">전체 데이터 표시 중</span>
+            </div>
+            <div>
+                <button onclick="openModal('settingsModal')" class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
+                    ⚙️ 설정
+                </button>
             </div>
         </div>
 
@@ -115,6 +183,8 @@
                         <th class="p-4">사번</th>
                         <th class="p-4 text-left pl-8">성명 (부서/공정/직급)</th>
                         <th class="p-4">주민등록번호</th>
+                        <th class="p-4">나이</th>
+                        <th class="p-4">성별</th>
                         <th class="p-4">입사일</th>
                         <th class="p-4">재직상태</th>
                         <th class="p-4">급여형태</th>
@@ -197,7 +267,7 @@
 </button>
 
 <!-- 정보 입력/수정 모달 -->
-<div id="hrModal" class="fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
+<div id="hrModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
         <h3 id="formTitle" class="text-2xl font-bold mb-6 text-slate-900">직원 정보 입력</h3>
         <div class="grid grid-cols-2 gap-4">
@@ -209,6 +279,7 @@
             <div><label class="block text-xs font-semibold mb-1">직위</label><input type="text" id="fRank" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div><label class="block text-xs font-semibold mb-1">주민등록/외국인번호</label><input type="text" id="fRegNo" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="000000-0000000"></div>
             <div><label class="block text-xs font-semibold mb-1">입사일</label><input type="date" id="fDate" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
+            <div><label class="block text-xs font-semibold mb-1">퇴사일</label><input type="date" id="fResignDate" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div><label class="block text-xs font-semibold mb-1">재직상태</label><select id="fStatus" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white"><option value="재직">재직</option><option value="퇴사">퇴사</option></select></div>
             <div><label class="block text-xs font-semibold mb-1">급여형태</label><input type="text" id="fSalaryType" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="시급제/연봉제"></div>
         </div>
@@ -223,6 +294,10 @@
     let dbData = { employees: [], salary: [], vacation: [], discipline: [] };
     let isMasked = true;
 
+    // 필터 및 정렬 상태 관리 객체
+    let filterState = { dept: '전체', process: '전체', rank: '전체', hireStart: '', hireEnd: '', resignStart: '', resignEnd: '', excludeResigned: true };
+    let sortState = 'name';
+
     window.onload = function() {
         const savedUser = localStorage.getItem('cenit_logged_user');
         if(savedUser) {
@@ -233,7 +308,7 @@
     };
 
     function showLoading(text) {
-        document.getElementById('loadingText').innerText = text || "저장 중...";
+        document.getElementById('loadingText').innerText = text || "처리 중...";
         document.getElementById('loadingModal').classList.add('show');
     }
 
@@ -248,6 +323,14 @@
 
     function closeCustomAlert() {
         document.getElementById('customAlertModal').classList.remove('show');
+    }
+
+    function openModal(modalId) {
+        document.getElementById(modalId).classList.add('show');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.remove('show');
     }
 
     async function handleLogin() {
@@ -287,7 +370,7 @@
             const res = await fetch(GAS_API_URL);
             dbData = await res.json();
             hideLoading();
-            populateDeptFilter();
+            populateFilterDropdowns();
             renderAllTables();
         } catch(e) {
             hideLoading();
@@ -295,16 +378,28 @@
         }
     }
 
-    function populateDeptFilter() {
-        const deptSelect = document.getElementById('deptFilter');
+    function populateFilterDropdowns() {
         const depts = new Set();
+        const processes = new Set();
+        const ranks = new Set();
+
         (dbData.employees || []).forEach(emp => {
             if(emp.부서) depts.add(emp.부서);
+            if(emp.공정) processes.add(emp.공정);
+            if(emp.직위) ranks.add(emp.직위);
         });
-        deptSelect.innerHTML = '<option value="전체">전체</option>';
-        depts.forEach(d => {
-            deptSelect.innerHTML += `<option value="${d}">${d}</option>`;
-        });
+
+        const fillSelect = (id, setVal) => {
+            const el = document.getElementById(id);
+            el.innerHTML = '<option value="전체">전체</option>';
+            setVal.forEach(val => {
+                el.innerHTML += `<option value="${val}">${val}</option>`;
+            });
+        };
+
+        fillSelect('modalDept', depts);
+        fillSelect('modalProcess', processes);
+        fillSelect('modalRank', ranks);
     }
 
     function switchTab(tabId) {
@@ -389,52 +484,129 @@
         }
     }
 
+    function parseRrnInfo(regNo) {
+        if (!regNo || regNo.length < 8) return { age: '-', gender: '-' };
+        const clean = String(regNo).replace(/[^0-9]/g, '');
+        if (clean.length < 7) return { age: '-', gender: '-' };
+        
+        const yy = parseInt(clean.substring(0, 2), 10);
+        const mm = parseInt(clean.substring(2, 4), 10);
+        const dd = parseInt(clean.substring(4, 6), 10);
+        const gCode = parseInt(clean.substring(6, 7), 10);
+        
+        let year = 1900 + yy;
+        if (gCode === 3 || gCode === 4 || gCode === 7 || gCode === 8) year = 2000 + yy;
+        else if (gCode === 9 || gCode === 0) year = 1800 + yy;
+        
+        const gender = (gCode % 2 !== 0) ? '남' : '여';
+        
+        const today = new Date();
+        let age = today.getFullYear() - year;
+        const m = (today.getMonth() + 1) - mm;
+        if (m < 0 || (m === 0 && today.getDate() < dd)) {
+            age--;
+        }
+        return { age: age >= 0 ? age + '세' : '-', gender };
+    }
+
+    function applyFilter() {
+        filterState.dept = document.getElementById('modalDept').value;
+        filterState.process = document.getElementById('modalProcess').value;
+        filterState.rank = document.getElementById('modalRank').value;
+        filterState.hireStart = document.getElementById('modalHireStart').value;
+        filterState.hireEnd = document.getElementById('modalHireEnd').value;
+        filterState.resignStart = document.getElementById('modalResignStart').value;
+        filterState.resignEnd = document.getElementById('modalResignEnd').value;
+        filterState.excludeResigned = document.getElementById('modalExcludeResigned').checked;
+
+        closeModal('filterModal');
+        document.getElementById('filterStatusBadge').innerText = "필터 적용됨";
+        renderEmpTable();
+    }
+
+    function resetFilter() {
+        document.getElementById('modalDept').value = '전체';
+        document.getElementById('modalProcess').value = '전체';
+        document.getElementById('modalRank').value = '전체';
+        document.getElementById('modalHireStart').value = '';
+        document.getElementById('modalHireEnd').value = '';
+        document.getElementById('modalResignStart').value = '';
+        document.getElementById('modalResignEnd').value = '';
+        document.getElementById('modalExcludeResigned').checked = true;
+
+        filterState = { dept: '전체', process: '전체', rank: '전체', hireStart: '', hireEnd: '', resignStart: '', resignEnd: '', excludeResigned: true };
+        closeModal('filterModal');
+        document.getElementById('filterStatusBadge').innerText = "전체 데이터 표시 중";
+        renderEmpTable();
+    }
+
+    function applySort() {
+        sortState = document.getElementById('modalSortCriteria').value;
+        closeModal('sortModal');
+        renderEmpTable();
+    }
+
     function renderEmpTable() {
         const empBody = document.getElementById('empTableBody');
         empBody.innerHTML = '';
 
         if(!dbData.employees || dbData.employees.length === 0) {
-            empBody.innerHTML = `<tr><td colspan="7" class="p-12 text-slate-400 text-center font-medium">데이터가 없습니다.</td></tr>`;
+            empBody.innerHTML = `<tr><td colspan="9" class="p-12 text-slate-400 text-center font-medium">데이터가 없습니다.</td></tr>`;
             return;
         }
 
-        const selectedDept = document.getElementById('deptFilter').value;
-        const excludeResigned = document.getElementById('excludeResigned').checked;
-        const sortCriteria = document.getElementById('sortCriteria').value;
-
-        // 필터링
+        // 필터링 적용
         let list = dbData.employees.filter(emp => {
-            if(selectedDept !== '전체' && emp.부서 !== selectedDept) return false;
-            if(excludeResigned && emp.재직상태 === '퇴사') return false;
+            if(filterState.dept !== '전체' && emp.부서 !== filterState.dept) return false;
+            if(filterState.process !== '전체' && emp.공정 !== filterState.process) return false;
+            if(filterState.rank !== '전체' && emp.직위 !== filterState.rank) return false;
+            if(filterState.excludeResigned && emp.재직상태 === '퇴사') return false;
+
+            if(filterState.hireStart && emp.입사일 && String(emp.입사일).substring(0, 7) < filterState.hireStart) return false;
+            if(filterState.hireEnd && emp.입사일 && String(emp.입사일).substring(0, 7) > filterState.hireEnd) return false;
+            if(filterState.resignStart && emp.퇴사일 && String(emp.퇴사일).substring(0, 7) < filterState.resignStart) return false;
+            if(filterState.resignEnd && emp.퇴사일 && String(emp.퇴사일).substring(0, 7) > filterState.resignEnd) return false;
+
             return true;
         });
 
-        // 정렬
+        // 정렬 적용 (부서 + 공정 복합 정렬 포함)
         list.sort((a, b) => {
-            if(sortCriteria === 'name') {
+            if(sortState === 'name') {
                 const nameA = a['성명(한글)'] || a['사내호칭'] || '';
                 const nameB = b['성명(한글)'] || b['사내호칭'] || '';
                 return nameA.localeCompare(nameB, 'ko');
-            } else if(sortCriteria === 'hireDate') {
+            } else if(sortState === 'dept_process') {
+                const deptComp = (a.부서 || '').localeCompare(b.부서 || '', 'ko');
+                if (deptComp !== 0) return deptComp;
+                return (a.공정 || '').localeCompare(b.공정 || '', 'ko');
+            } else if(sortState === 'dept') {
+                return (a.부서 || '').localeCompare(b.부서 || '', 'ko');
+            } else if(sortState === 'process') {
+                return (a.공정 || '').localeCompare(b.공정 || '', 'ko');
+            } else if(sortState === 'rank') {
+                return (a.직위 || '').localeCompare(b.직위 || '', 'ko');
+            } else if(sortState === 'hireDate') {
                 return (a.입사일 || '').localeCompare(b.입사일 || '');
-            } else if(sortCriteria === 'empId') {
-                return String(a.사번 || '').localeCompare(String(b.사번 || ''));
+            } else if(sortState === 'nationality') {
+                return (a.국적 || '').localeCompare(b.국적 || '', 'ko');
             }
         });
 
         if(list.length === 0) {
-            empBody.innerHTML = `<tr><td colspan="7" class="p-12 text-slate-400 text-center font-medium">조건에 해당되는 데이터가 없습니다.</td></tr>`;
+            empBody.innerHTML = `<tr><td colspan="9" class="p-12 text-slate-400 text-center font-medium">조건에 해당되는 데이터가 없습니다.</td></tr>`;
             return;
         }
 
-        list.forEach((emp, idx) => {
-            // 외국인은 사내호칭 대체 출력
+        list.forEach((emp) => {
             const name = emp['성명(한글)'] || emp['사내호칭'] || '-';
             const dept = emp.부서 || '-';
             const process = emp.공정 || '-';
             const rank = emp.직위 || '-';
 
             let regNo = emp['주민등록번호/외국인등록번호'] || "";
+            const info = parseRrnInfo(regNo);
+
             if(isMasked && regNo !== "" && regNo.length >= 8) {
                 regNo = regNo.substring(0, 8) + "******";
             }
@@ -447,6 +619,8 @@
                         <div class="text-xs text-slate-400 font-semibold">${dept} / ${process} / ${rank}</div>
                     </td>
                     <td class="p-4 font-mono">${regNo}</td>
+                    <td class="p-4 font-semibold text-slate-700">${info.age}</td>
+                    <td class="p-4 font-semibold text-slate-700">${info.gender}</td>
                     <td class="p-4 text-xs text-slate-500">${emp.입사일 ? String(emp.입사일).split('T')[0] : ''}</td>
                     <td class="p-4"><span class="px-2.5 py-1 rounded-md text-xs font-bold ${emp.재직상태 === '재직' ? 'bg-emerald-50 text-emerald-600' : (emp.재직상태 ? 'bg-rose-50 text-rose-600' : '')}">${emp.재직상태 || ''}</span></td>
                     <td class="p-4 text-xs">${emp.급여형태 || ''}</td>
@@ -474,7 +648,7 @@
     }
 
     function openForm(idx) {
-        document.getElementById('hrModal').classList.add('show');
+        openModal('hrModal');
         if(idx === -1) {
             document.getElementById('formTitle').innerText = "신규 입사자 등록";
             document.getElementById('fId').value = "";
@@ -485,6 +659,7 @@
             document.getElementById('fRank').value = "";
             document.getElementById('fRegNo').value = "";
             document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('fResignDate').value = "";
             document.getElementById('fStatus').value = "재직";
             document.getElementById('fSalaryType').value = "시급제";
             document.getElementById('fId').disabled = false;
@@ -499,13 +674,14 @@
             document.getElementById('fRank').value = e.직위 || "";
             document.getElementById('fRegNo').value = e['주민등록번호/외국인등록번호'] || "";
             document.getElementById('fDate').value = e.입사일 ? String(e.입사일).split('T')[0] : "";
+            document.getElementById('fResignDate').value = e.퇴사일 ? String(e.퇴사일).split('T')[0] : "";
             document.getElementById('fStatus').value = e.재직상태 || "재직";
             document.getElementById('fSalaryType').value = e.급여형태 || "시급제";
             document.getElementById('fId').disabled = true;
         }
     }
 
-    function closeForm() { document.getElementById('hrModal').classList.remove('show'); }
+    function closeForm() { closeModal('hrModal'); }
 
     async function saveEmployeeData() {
         const empData = {
@@ -517,6 +693,7 @@
             "사내호칭": document.getElementById('fNickname').value,
             "주민등록번호/외국인등록번호": document.getElementById('fRegNo').value,
             입사일: document.getElementById('fDate').value,
+            퇴사일: document.getElementById('fResignDate').value,
             재직상태: document.getElementById('fStatus').value,
             급여형태: document.getElementById('fSalaryType').value
         };
