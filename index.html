@@ -88,9 +88,6 @@
     </div>
 </div>
 
-<!-- 엑셀 파일 업로드용 숨김 INPUT -->
-<input type="file" id="excelUploadInput" accept=".xlsx,.xls" class="hidden" onchange="handleExcelFileSelected(event)">
-
 <!-- 상세 필터 모달 -->
 <div id="filterModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -168,7 +165,7 @@
         <h3 class="text-xl font-bold mb-4 text-slate-900">📊 정렬 순서 설정 (1차 ~ 5차)</h3>
         <div id="sortLevelsContainer" class="space-y-3 text-xs font-semibold"></div>
         <p class="text-[11px] text-slate-400 mt-3">
-            * 부서·공정·직급·국적의 사용자 지정 순서는 <b>[설정 ➔ 정렬 순서]</b>에서 관리할 수 있습니다.
+            * 부서·공정·직급·국적의 사용자 지정 순서는 <b>[설정 ➔ 정렬 관리]</b>에서 관리할 수 있습니다.
         </p>
         <div class="flex gap-2 mt-5">
             <button onclick="closeModal('sortModal')" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-xs">취소</button>
@@ -177,7 +174,7 @@
     </div>
 </div>
 
-<!-- 탭별 설정 모달 (헤더 순서/추가/삭제 + 정렬 순서 + 엑셀 입출력/양식 다운로드) -->
+<!-- 탭별 설정 모달 (헤더 관리 / 정렬 관리 / Data 관리) -->
 <div id="settingsModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white w-full max-w-2xl rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
@@ -185,47 +182,28 @@
             <span class="text-xs font-bold text-slate-400">등록 직원: <span id="settingsEmpCount">0</span>명</span>
         </div>
 
-        <div class="flex gap-2 mb-4 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
-            <button type="button" id="setTabColumnsBtn" onclick="switchSettingsSubTab('columns')" class="flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition">헤더 관리 & 엑셀</button>
-            <button type="button" id="setTabSortBtn" onclick="switchSettingsSubTab('sort')" class="flex-1 py-2 rounded-xl text-slate-600 transition">정렬 순서</button>
+        <div class="flex gap-2 mb-5 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+            <button type="button" id="setTabColumnsBtn" onclick="switchSettingsSubTab('columns')" class="flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition">헤더 관리</button>
+            <button type="button" id="setTabSortBtn" onclick="switchSettingsSubTab('sort')" class="flex-1 py-2 rounded-xl text-slate-600 transition">정렬 관리</button>
+            <button type="button" id="setTabDataBtn" onclick="switchSettingsSubTab('data')" class="flex-1 py-2 rounded-xl text-slate-600 transition">Data 관리</button>
         </div>
 
-        <!-- 1. 헤더 관리 & 엑셀 -->
+        <!-- 1. 헤더 관리 -->
         <div id="settingsSubColumns" class="space-y-4 text-xs">
-            <div class="bg-blue-50/70 border border-blue-100 p-3.5 rounded-2xl space-y-2">
-                <p class="font-bold text-blue-900">📊 엑셀 Data 관리 (현재 헤더 순서 기준)</p>
-                <div class="flex flex-wrap gap-2">
-                    <button type="button" onclick="exportCurrentTabToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl font-bold transition">⬇ Data 내보내기 (.xlsx)</button>
-                    <button type="button" onclick="triggerExcelUpload()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl font-bold transition">⬆ Data 불러오기 (.xlsx)</button>
-                    <button type="button" onclick="downloadExcelTemplate()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-xl font-bold transition">📄 업로드용 양식 다운로드</button>
-                </div>
-                <p class="text-[11px] text-slate-500">
-                    * 내보내기는 현재 조절된 헤더 순서로 내려받으며, 불러오기는 업로드 파일의 헤더 순서·이름을 기준으로 매칭합니다.
-                </p>
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-[11px] text-slate-600 flex items-center justify-between">
+                <span>고정 항목: <b class="text-slate-800" id="fixedColumnsText">사번 · 성명(요약)</b> (표 맨 앞 고정)</span>
+                <span><b class="text-blue-600">ON</b>: 표시 · <b class="text-rose-600">OFF</b>: 숨김</span>
             </div>
 
-            <div class="space-y-2">
-                <label class="font-bold text-slate-700 block">새 항목 추가 (연동 시트 3행 헤더 반영)</label>
-                <div class="flex gap-2">
-                    <input type="text" id="newColumnNameInput" placeholder="예: 비상연락망, 비고2 등" class="flex-1 border border-slate-200 rounded-xl px-3.5 py-2 text-xs outline-none">
-                    <button type="button" onclick="handleAddColumn()" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl font-bold transition">+ 항목 추가</button>
-                </div>
-            </div>
+            <div id="columnOrderListContainer" class="border border-slate-200 rounded-2xl p-2.5 bg-slate-50 max-h-64 overflow-y-auto space-y-1.5"></div>
 
-            <div class="space-y-1.5">
-                <div class="flex items-center justify-between">
-                    <span class="font-bold text-slate-700">표시 항목 순서 및 삭제 (드래그 또는 ▲/▼)</span>
-                    <button type="button" onclick="resetCurrentTabColumns()" class="text-[11px] text-slate-500 underline">기본 순서 복원</button>
-                </div>
-                <div id="columnOrderListContainer" class="border border-slate-200 rounded-2xl p-2.5 bg-slate-50 max-h-60 overflow-y-auto space-y-1.5"></div>
-            </div>
-
-            <div class="flex gap-2 pt-1">
-                <button type="button" onclick="saveCurrentTabColumns()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold shadow-md transition">헤더 순서 저장</button>
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="resetCurrentTabColumns()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition">초기화</button>
+                <button type="button" onclick="saveCurrentTabColumns()" class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md transition">헤더 순서 저장</button>
             </div>
         </div>
 
-        <!-- 2. 사용자 지정 정렬 순서 -->
+        <!-- 2. 정렬 관리 -->
         <div id="settingsSubSort" class="hidden space-y-4 text-xs">
             <div class="flex items-center justify-between gap-2">
                 <span class="font-bold text-slate-600">순서 변경 대상 항목</span>
@@ -238,14 +216,27 @@
             </div>
 
             <p class="text-[11px] text-slate-400">
-                직원명부 데이터에서 자동으로 불러온 목록입니다. 드래그하거나 ▲/▼ 버튼으로 순서를 지정하세요.
+                직원명부 데이터에서 불러온 목록입니다. 항목을 드래그하거나 ▲/▼ 버튼으로 순서를 맞추세요.
             </p>
 
             <div id="customOrderListContainer" class="border border-slate-200 rounded-2xl p-2.5 bg-slate-50 max-h-60 overflow-y-auto space-y-1.5"></div>
 
-            <div class="flex gap-2 pt-1">
-                <button type="button" onclick="resetCurrentCustomOrder()" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition">가나다순 초기화</button>
-                <button type="button" onclick="saveCustomOrderSettings()" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold shadow-md hover:bg-blue-700 transition">정렬 순서 저장</button>
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="resetCurrentCustomOrder()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition">초기화</button>
+                <button type="button" onclick="saveCustomOrderSettings()" class="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md transition">정렬 순서 저장</button>
+            </div>
+        </div>
+
+        <!-- 3. Data 관리 -->
+        <div id="settingsSubData" class="hidden space-y-4 text-xs">
+            <div class="bg-blue-50/70 border border-blue-100 p-4 rounded-2xl space-y-3">
+                <p class="font-bold text-blue-900 text-sm">📊 엑셀 Data 내보내기</p>
+                <p class="text-[11px] text-slate-600 leading-relaxed">
+                    현재 탭에서 <b>활성화(ON)된 항목</b>만 <b>설정한 헤더 순서</b>대로 엑셀(.xlsx) 파일로 다운로드합니다.
+                </p>
+                <button type="button" onclick="exportCurrentTabToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-sm transition">
+                    ⬇ Data 내보내기 (.xlsx)
+                </button>
             </div>
         </div>
 
@@ -514,25 +505,59 @@
         discipline: '징계/포상'
     };
 
-    const SHEET_NAMES = {
-        emp: '직원명부',
-        salary: '급여관리',
-        vacation: '휴가관리',
-        discipline: '징계/포상'
+    // 표 맨 앞에 고정되는 항목 (순서 조절·ON/OFF 대상에서 제외)
+    const FIXED_LEADING_COLUMNS = {
+        emp: ['사번', '성명(요약)'],
+        salary: ['사번', '성명'],
+        vacation: ['사번', '성명'],
+        discipline: ['사번', '성명']
     };
 
-    const DEFAULT_TAB_COLUMNS = {
-        emp: ['사번', '성명(요약)', '연락처', '주민등록번호/외국인번호', '나이', '성별', '입사일', '퇴사일', '재직상태', '급여형태', '연차기준', '메모', '관리'],
-        salary: ['사번', '성명', '귀속연월', '급여형태', '기본급', '연장근로수당', '야간근로수당', '휴일근로수당', '직책수당', '지급총액'],
-        vacation: ['사번', '성명', '귀속연도', '휴가구분', '사용일수', '휴가시작일', '휴가종료일', '휴가사유'],
-        discipline: ['사번', '성명', '구분', '종류', '처분일자', '사유', '조치내용']
+    // 순서 조절 및 ON/OFF 대상 항목 (초기값)
+    const DEFAULT_ADJUSTABLE_COLUMNS = {
+        emp: [
+            { name: '연락처', enabled: true },
+            { name: '주민등록번호/외국인번호', enabled: true },
+            { name: '나이', enabled: true },
+            { name: '성별', enabled: true },
+            { name: '입사일', enabled: true },
+            { name: '퇴사일', enabled: true },
+            { name: '재직상태', enabled: true },
+            { name: '급여형태', enabled: true },
+            { name: '연차기준', enabled: true },
+            { name: '메모', enabled: true },
+            { name: '관리', enabled: true }
+        ],
+        salary: [
+            { name: '귀속연월', enabled: true },
+            { name: '급여형태', enabled: true },
+            { name: '기본급', enabled: true },
+            { name: '연장근로수당', enabled: true },
+            { name: '야간근로수당', enabled: true },
+            { name: '휴일근로수당', enabled: true },
+            { name: '직책수당', enabled: true },
+            { name: '지급총액', enabled: true }
+        ],
+        vacation: [
+            { name: '귀속연도', enabled: true },
+            { name: '휴가구분', enabled: true },
+            { name: '사용일수', enabled: true },
+            { name: '휴가시작일', enabled: true },
+            { name: '휴가종료일', enabled: true },
+            { name: '휴가사유', enabled: true }
+        ],
+        discipline: [
+            { name: '구분', enabled: true },
+            { name: '종류', enabled: true },
+            { name: '처분일자', enabled: true },
+            { name: '사유', enabled: true },
+            { name: '조치내용', enabled: true }
+        ]
     };
-
-    const PROTECTED_COLUMNS = new Set(['사번', '성명', '성명(요약)', '관리']);
 
     const STORAGE_KEYS = {
-        customOrders: 'cenit_custom_sort_orders_v3',
-        tabColumns: 'cenit_tab_columns_v3'
+        customOrders: 'cenit_custom_sort_orders_v4',
+        adjustableColumns: 'cenit_adjustable_columns_v4'
     };
 
     let dbData = { employees: [], salary: [], vacation: [], discipline: [] };
@@ -557,7 +582,9 @@
     ];
 
     let customOrders = loadJsonStorage(STORAGE_KEYS.customOrders, { dept: [], process: [], rank: [], nationality: [] });
-    let tabColumnsConfig = loadJsonStorage(STORAGE_KEYS.tabColumns, JSON.parse(JSON.stringify(DEFAULT_TAB_COLUMNS)));
+    let adjustableColumnsConfig = normalizeAdjustableConfig(
+        loadJsonStorage(STORAGE_KEYS.adjustableColumns, DEFAULT_ADJUSTABLE_COLUMNS)
+    );
 
     let currentOrderCategory = 'dept';
     let draftOrderList = [];
@@ -566,7 +593,7 @@
     function loadJsonStorage(key, fallback) {
         try {
             const raw = localStorage.getItem(key);
-            return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
+            return raw ? JSON.parse(raw) : fallback;
         } catch (e) {
             return fallback;
         }
@@ -574,6 +601,38 @@
 
     function saveJsonStorage(key, value) {
         localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function normalizeAdjustableConfig(rawConfig) {
+        const result = {};
+        Object.keys(DEFAULT_ADJUSTABLE_COLUMNS).forEach(tab => {
+            const defaults = DEFAULT_ADJUSTABLE_COLUMNS[tab];
+            const saved = Array.isArray(rawConfig?.[tab]) ? rawConfig[tab] : defaults;
+            const validNames = new Set(defaults.map(d => d.name));
+            const merged = [];
+
+            saved.forEach(item => {
+                if (item && validNames.has(item.name) && !merged.some(m => m.name === item.name)) {
+                    merged.push({ name: item.name, enabled: item.enabled !== false });
+                }
+            });
+            defaults.forEach(d => {
+                if (!merged.some(m => m.name === d.name)) {
+                    merged.push({ ...d });
+                }
+            });
+            result[tab] = merged;
+        });
+        return result;
+    }
+
+    // 고정 항목 + 활성화된 조절 항목 합산
+    function getVisibleTabColumns(tabId) {
+        const fixed = FIXED_LEADING_COLUMNS[tabId] || [];
+        const adj = (adjustableColumnsConfig[tabId] || DEFAULT_ADJUSTABLE_COLUMNS[tabId])
+            .filter(item => item.enabled !== false)
+            .map(item => item.name);
+        return [...fixed, ...adj];
     }
 
     // ==========================================
@@ -660,6 +719,7 @@
             initCustomDateInput(`date-${id}`, id);
         });
         renderSortModalInputs();
+        renderAllTables();
 
         const savedUser = localStorage.getItem('cenit_logged_user');
         if (savedUser) {
@@ -784,12 +844,7 @@
     }
 
     function populateFilterCheckboxes() {
-        const sets = {
-            dept: new Set(),
-            process: new Set(),
-            rank: new Set(),
-            nationality: new Set()
-        };
+        const sets = { dept: new Set(), process: new Set(), rank: new Set(), nationality: new Set() };
 
         (dbData.employees || []).forEach(emp => {
             if (emp.부서) sets.dept.add(String(emp.부서).trim());
@@ -1033,12 +1088,13 @@
     }
 
     // ==========================================
-    // ⚙️ 탭별 설정 (헤더 순서/추가/삭제 + 커스텀 정렬 + 엑셀)
+    // ⚙️ 탭별 설정 (헤더 관리 / 정렬 관리 / Data 관리)
     // ==========================================
     function openTabSettings(tabId) {
         currentSettingsTab = tabId;
         document.getElementById('settingsTargetTabLabel').innerText = TAB_LABELS[tabId] || tabId;
         document.getElementById('settingsEmpCount').innerText = (dbData.employees || []).length;
+        document.getElementById('fixedColumnsText').innerText = (FIXED_LEADING_COLUMNS[tabId] || []).join(' · ');
         switchSettingsSubTab('columns');
         openModal('settingsModal');
     }
@@ -1046,30 +1102,41 @@
     function switchSettingsSubTab(subTab) {
         const colBox = document.getElementById('settingsSubColumns');
         const sortBox = document.getElementById('settingsSubSort');
+        const dataBox = document.getElementById('settingsSubData');
+
         const colBtn = document.getElementById('setTabColumnsBtn');
         const sortBtn = document.getElementById('setTabSortBtn');
+        const dataBtn = document.getElementById('setTabDataBtn');
+
+        colBox.classList.toggle('hidden', subTab !== 'columns');
+        sortBox.classList.toggle('hidden', subTab !== 'sort');
+        dataBox.classList.toggle('hidden', subTab !== 'data');
+
+        const activeCls = 'flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition';
+        const inactiveCls = 'flex-1 py-2 rounded-xl text-slate-600 transition';
+
+        colBtn.className = subTab === 'columns' ? activeCls : inactiveCls;
+        sortBtn.className = subTab === 'sort' ? activeCls : inactiveCls;
+        dataBtn.className = subTab === 'data' ? activeCls : inactiveCls;
 
         if (subTab === 'columns') {
-            colBox.classList.remove('hidden');
-            sortBox.classList.add('hidden');
-            colBtn.className = 'flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition';
-            sortBtn.className = 'flex-1 py-2 rounded-xl text-slate-600 transition';
-            draftColumnsList = [...(tabColumnsConfig[currentSettingsTab] || DEFAULT_TAB_COLUMNS[currentSettingsTab])];
+            draftColumnsList = (adjustableColumnsConfig[currentSettingsTab] || DEFAULT_ADJUSTABLE_COLUMNS[currentSettingsTab])
+                .map(c => ({ name: c.name, enabled: c.enabled !== false }));
             renderColumnOrderDraftList();
-        } else {
-            colBox.classList.add('hidden');
-            sortBox.classList.remove('hidden');
-            sortBtn.className = 'flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition';
-            colBtn.className = 'flex-1 py-2 rounded-xl text-slate-600 transition';
+        } else if (subTab === 'sort') {
             selectCustomOrderCategory(currentOrderCategory);
         }
     }
 
-    function attachDragAndReorder(container, listRef, onReorder) {
+    function renderColumnOrderDraftList() {
+        const container = document.getElementById('columnOrderListContainer');
+        container.innerHTML = '';
         let dragSrc = null;
-        listRef.forEach((item, idx) => {
+
+        draftColumnsList.forEach((item, idx) => {
+            const isOn = item.enabled !== false;
             const row = document.createElement('div');
-            row.className = 'sortable-item flex items-center justify-between bg-white px-3.5 py-2 rounded-xl border border-slate-200 cursor-grab';
+            row.className = `sortable-item flex items-center justify-between px-3.5 py-2 rounded-xl border cursor-grab ${isOn ? 'bg-white border-slate-200' : 'bg-rose-50/40 border-rose-200/70'}`;
             row.draggable = true;
 
             row.addEventListener('dragstart', () => { dragSrc = idx; row.classList.add('dragging'); });
@@ -1083,88 +1150,53 @@
                 e.preventDefault();
                 row.classList.remove('drag-over');
                 if (dragSrc !== null && dragSrc !== idx) {
-                    const [moved] = listRef.splice(dragSrc, 1);
-                    listRef.splice(idx, 0, moved);
+                    const [moved] = draftColumnsList.splice(dragSrc, 1);
+                    draftColumnsList.splice(idx, 0, moved);
                     dragSrc = null;
-                    onReorder();
+                    renderColumnOrderDraftList();
                 }
             });
 
-            const canDelete = !PROTECTED_COLUMNS.has(item) && container.id === 'columnOrderListContainer';
             row.innerHTML = `
                 <div class="flex items-center gap-2.5">
                     <span class="text-slate-400 select-none">⋮⋮</span>
                     <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-extrabold text-[10px]">${idx + 1}</span>
-                    <span class="font-bold text-slate-800 text-xs">${item}</span>
+                    <span class="font-bold text-xs ${isOn ? 'text-slate-800' : 'text-slate-400 line-through'}">${item.name}</span>
                 </div>
                 <div class="flex items-center gap-1">
-                    <button type="button" onclick="reorderItem('${container.id}', ${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold">▲</button>
-                    <button type="button" onclick="reorderItem('${container.id}', ${idx}, 1)" ${idx === listRef.length - 1 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold">▼</button>
-                    ${canDelete ? `<button type="button" onclick="deleteColumnFromDraft(${idx})" class="px-2 py-1 rounded bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold ml-1">삭제</button>` : ''}
+                    <button type="button" onclick="reorderAdjustableColumn(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold">▲</button>
+                    <button type="button" onclick="reorderAdjustableColumn(${idx}, 1)" ${idx === draftColumnsList.length - 1 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold">▼</button>
+                    <button type="button" onclick="toggleDraftColumnEnabled(${idx})" class="px-2.5 py-1 rounded font-bold ml-1.5 text-white transition ${isOn ? 'bg-blue-600 hover:bg-blue-700' : 'bg-rose-600 hover:bg-rose-700'}">
+                        ${isOn ? 'ON' : 'OFF'}
+                    </button>
                 </div>`;
             container.appendChild(row);
         });
     }
 
-    function renderColumnOrderDraftList() {
-        const container = document.getElementById('columnOrderListContainer');
-        container.innerHTML = '';
-        attachDragAndReorder(container, draftColumnsList, renderColumnOrderDraftList);
-    }
-
-    function reorderItem(containerId, idx, delta) {
-        const targetList = containerId === 'columnOrderListContainer' ? draftColumnsList : draftOrderList;
+    function reorderAdjustableColumn(idx, delta) {
         const target = idx + delta;
-        if (target < 0 || target >= targetList.length) return;
-        [targetList[idx], targetList[target]] = [targetList[target], targetList[idx]];
-        if (containerId === 'columnOrderListContainer') renderColumnOrderDraftList();
-        else renderCustomOrderDraftList();
-    }
-
-    function deleteColumnFromDraft(idx) {
-        const colName = draftColumnsList[idx];
-        if (PROTECTED_COLUMNS.has(colName)) return showCustomAlert('필수 항목은 삭제할 수 없습니다.');
-        draftColumnsList.splice(idx, 1);
+        if (target < 0 || target >= draftColumnsList.length) return;
+        [draftColumnsList[idx], draftColumnsList[target]] = [draftColumnsList[target], draftColumnsList[idx]];
         renderColumnOrderDraftList();
     }
 
-    async function handleAddColumn() {
-        const input = document.getElementById('newColumnNameInput');
-        const colName = input.value.trim();
-        if (!colName) return showCustomAlert('추가할 항목명을 입력해주세요.');
-        if (draftColumnsList.includes(colName)) return showCustomAlert('이미 존재하는 항목명입니다.');
-
-        draftColumnsList.push(colName);
-        input.value = '';
+    function toggleDraftColumnEnabled(idx) {
+        if (!draftColumnsList[idx]) return;
+        draftColumnsList[idx].enabled = draftColumnsList[idx].enabled === false ? true : false;
         renderColumnOrderDraftList();
-
-        showLoading('스프레드시트 헤더 반영 중...');
-        try {
-            const res = await callGasApi({
-                action: 'addColumn',
-                sheetName: SHEET_NAMES[currentSettingsTab],
-                columnName: colName
-            });
-            hideLoading();
-            if (!res.success) {
-                showCustomAlert('시트 헤더 추가 실패: ' + (res.error || '오류'));
-            }
-        } catch (e) {
-            hideLoading();
-            showCustomAlert('시트 동기화 오류: ' + e.message);
-        }
     }
 
     function resetCurrentTabColumns() {
-        draftColumnsList = [...DEFAULT_TAB_COLUMNS[currentSettingsTab]];
+        draftColumnsList = (DEFAULT_ADJUSTABLE_COLUMNS[currentSettingsTab] || []).map(c => ({ ...c }));
         renderColumnOrderDraftList();
     }
 
     function saveCurrentTabColumns() {
-        tabColumnsConfig[currentSettingsTab] = [...draftColumnsList];
-        saveJsonStorage(STORAGE_KEYS.tabColumns, tabColumnsConfig);
+        adjustableColumnsConfig[currentSettingsTab] = draftColumnsList.map(c => ({ name: c.name, enabled: c.enabled !== false }));
+        saveJsonStorage(STORAGE_KEYS.adjustableColumns, adjustableColumnsConfig);
         renderAllTables();
-        showCustomAlert(`${TAB_LABELS[currentSettingsTab]} 헤더 순서가 저장되었습니다.`);
+        showCustomAlert(`${TAB_LABELS[currentSettingsTab]} 헤더 설정이 저장되었습니다.`);
     }
 
     function selectCustomOrderCategory(category) {
@@ -1187,7 +1219,49 @@
             container.innerHTML = `<div class="text-center text-slate-400 py-6">불러올 항목 데이터가 없습니다.</div>`;
             return;
         }
-        attachDragAndReorder(container, draftOrderList, renderCustomOrderDraftList);
+        let dragSrc = null;
+        draftOrderList.forEach((item, idx) => {
+            const row = document.createElement('div');
+            row.className = 'sortable-item flex items-center justify-between bg-white px-3.5 py-2 rounded-xl border border-slate-200 cursor-grab';
+            row.draggable = true;
+
+            row.addEventListener('dragstart', () => { dragSrc = idx; row.classList.add('dragging'); });
+            row.addEventListener('dragend', () => {
+                row.classList.remove('dragging');
+                container.querySelectorAll('.sortable-item').forEach(el => el.classList.remove('drag-over'));
+            });
+            row.addEventListener('dragover', (e) => { e.preventDefault(); row.classList.add('drag-over'); });
+            row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                row.classList.remove('drag-over');
+                if (dragSrc !== null && dragSrc !== idx) {
+                    const [moved] = draftOrderList.splice(dragSrc, 1);
+                    draftOrderList.splice(idx, 0, moved);
+                    dragSrc = null;
+                    renderCustomOrderDraftList();
+                }
+            });
+
+            row.innerHTML = `
+                <div class="flex items-center gap-2.5">
+                    <span class="text-slate-400 select-none">⋮⋮</span>
+                    <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-extrabold text-[10px]">${idx + 1}</span>
+                    <span class="font-bold text-slate-800 text-xs">${item}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button type="button" onclick="reorderCustomOrder(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold">▲</button>
+                    <button type="button" onclick="reorderCustomOrder(${idx}, 1)" ${idx === draftOrderList.length - 1 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold">▼</button>
+                </div>`;
+            container.appendChild(row);
+        });
+    }
+
+    function reorderCustomOrder(idx, delta) {
+        const target = idx + delta;
+        if (target < 0 || target >= draftOrderList.length) return;
+        [draftOrderList[idx], draftOrderList[target]] = [draftOrderList[target], draftOrderList[idx]];
+        renderCustomOrderDraftList();
     }
 
     function resetCurrentCustomOrder() {
@@ -1203,11 +1277,10 @@
     }
 
     // ==========================================
-    // 📥📤 엑셀 내보내기 / 불러오기 / 양식 다운로드
+    // 📥 엑셀 내보내기 (설정된 순서 + ON 항목만)
     // ==========================================
     function getExportableHeaders(tabId) {
-        const cols = tabColumnsConfig[tabId] || DEFAULT_TAB_COLUMNS[tabId];
-        return cols.filter(c => c !== '관리');
+        return getVisibleTabColumns(tabId).filter(c => c !== '관리');
     }
 
     function resolveRowValueByHeader(tabId, rowObj, header) {
@@ -1265,63 +1338,6 @@
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, TAB_LABELS[currentSettingsTab]);
         XLSX.writeFile(wb, `${TAB_LABELS[currentSettingsTab]}_내보내기.xlsx`);
-    }
-
-    function downloadExcelTemplate() {
-        const headers = getExportableHeaders(currentSettingsTab);
-        const sampleRow = {};
-        headers.forEach(h => {
-            if (h === '사번') sampleRow[h] = '10001';
-            else if (h === '성명(요약)' || h === '성명') sampleRow[h] = '홍길동';
-            else if (h === '연락처') sampleRow[h] = '010-1234-5678';
-            else if (['입사일', '휴가시작일', '휴가종료일'].includes(h)) sampleRow[h] = '2026-01-01';
-            else sampleRow[h] = '';
-        });
-
-        const ws = XLSX.utils.json_to_sheet([sampleRow], { header: headers });
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, '업로드양식');
-        XLSX.writeFile(wb, `${TAB_LABELS[currentSettingsTab]}_업로드양식.xlsx`);
-    }
-
-    function triggerExcelUpload() {
-        document.getElementById('excelUploadInput').click();
-    }
-
-    async function handleExcelFileSelected(event) {
-        const file = event.target.files?.[0];
-        event.target.value = '';
-        if (!file) return;
-
-        showLoading('엑셀 파일 분석 및 업로드 중...');
-        try {
-            const buffer = await file.arrayBuffer();
-            const wb = XLSX.read(buffer, { type: 'array' });
-            const firstSheet = wb.Sheets[wb.SheetNames[0]];
-            const parsedRows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
-
-            if (!parsedRows.length) {
-                hideLoading();
-                return showCustomAlert('업로드할 데이터가 없습니다.');
-            }
-
-            const result = await callGasApi({
-                action: 'importRows',
-                sheetName: SHEET_NAMES[currentSettingsTab],
-                rows: parsedRows
-            });
-
-            hideLoading();
-            if (result.success) {
-                showCustomAlert(`${parsedRows.length}건 데이터가 반영되었습니다.`);
-                fetchAllData();
-            } else {
-                showCustomAlert('업로드 실패: ' + (result.error || '오류'));
-            }
-        } catch (err) {
-            hideLoading();
-            showCustomAlert('엑셀 처리 오류: ' + err.message);
-        }
     }
 
     // ==========================================
@@ -1497,7 +1513,7 @@
 
     function renderTableHeader(headId, tabId) {
         const thead = document.getElementById(headId);
-        const cols = tabColumnsConfig[tabId] || DEFAULT_TAB_COLUMNS[tabId];
+        const cols = getVisibleTabColumns(tabId);
         thead.innerHTML = `<tr>${cols.map(c => `<th class="p-4">${c === '성명(요약)' ? '성명 (부서/공정/직급)' : c}</th>`).join('')}</tr>`;
     }
 
@@ -1505,7 +1521,7 @@
         renderTableHeader('empTableHead', 'emp');
         updateSortStatusBadge();
 
-        const cols = tabColumnsConfig.emp || DEFAULT_TAB_COLUMNS.emp;
+        const cols = getVisibleTabColumns('emp');
         const tbody = document.getElementById('empTableBody');
         const list = getFilteredSortedEmployees();
 
@@ -1547,7 +1563,7 @@
 
     function renderGenericDataTable(tabId, headId, bodyId, dataList) {
         renderTableHeader(headId, tabId);
-        const cols = tabColumnsConfig[tabId] || DEFAULT_TAB_COLUMNS[tabId];
+        const cols = getVisibleTabColumns(tabId);
         const tbody = document.getElementById(bodyId);
 
         if (!dataList || !dataList.length) {
