@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <title>(주)쎄니트 의령본사 인사관리시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script>
         // ==========================================
         // 🛠️ [중요] 구글 앱스 스크립트 웹앱 URL 입력부
         // ==========================================
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbw3Yt01MwAkYpJMheKjpP3dqC9vkx5O5_ofyJByOfo-vspqxA644i82brr2uUzEJf1p/exec"; 
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx_uav3DZhtIKaVV5q81Ykr7nN8XZjNeCXZ-iu7ZKFHSOUPn7g4S-BHJoMTxUzcWt9J/exec";
     </script>
     <style>
         #loginOverlay { display: flex; }
@@ -19,7 +20,6 @@
         .tab-content.active { display: block; }
         .tab-btn.active { border-bottom-color: #2563eb; color: #2563eb; font-weight: 800; }
 
-        /* 커스텀 날짜 입력 박스 스타일 */
         .custom-date-box {
             display: inline-flex;
             align-items: center;
@@ -46,7 +46,6 @@
             letter-spacing: 0.05em;
         }
 
-        /* 드래그 피드백 */
         .sortable-item.dragging {
             opacity: 0.45;
             background-color: #eff6ff;
@@ -59,7 +58,7 @@
 </head>
 <body class="bg-slate-50 p-8 text-slate-800 font-sans relative min-h-screen">
 
-<!-- 파란색 전체 배경 로그인 오버레이 -->
+<!-- 로그인 오버레이 -->
 <div id="loginOverlay" class="fixed inset-0 bg-blue-600 z-[99999] flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl text-center">
         <h2 class="text-2xl font-black text-slate-900 mb-2">(주)쎄니트 의령본사</h2>
@@ -80,7 +79,7 @@
     </div>
 </div>
 
-<!-- 커스텀 System Message 모달 -->
+<!-- 알림 모달 -->
 <div id="customAlertModal" class="modal-box fixed inset-0 bg-slate-950/60 z-[999999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
         <p class="text-xs font-black text-blue-600 tracking-wider mb-1">System Message</p>
@@ -89,13 +88,14 @@
     </div>
 </div>
 
-<!-- 상세 필터 팝업 모달 (다중 필터 동시 적용) -->
+<!-- 엑셀 파일 업로드용 숨김 INPUT -->
+<input type="file" id="excelUploadInput" accept=".xlsx,.xls" class="hidden" onchange="handleExcelFileSelected(event)">
+
+<!-- 상세 필터 모달 -->
 <div id="filterModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         <h3 class="text-xl font-bold mb-5 text-slate-900">🔍 상세 필터 설정</h3>
         <div class="space-y-4 text-xs font-semibold">
-
-            <!-- 부서 -->
             <div class="relative filter-dropdown-group">
                 <label class="block text-slate-500 mb-1 font-bold">부서</label>
                 <button type="button" onclick="toggleFilterDropdown('deptDropdown')" class="w-full flex justify-between items-center border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-left transition">
@@ -105,7 +105,6 @@
                 <div id="deptDropdown" class="filter-dropdown-panel hidden mt-1 border border-slate-200 rounded-xl p-2.5 max-h-40 overflow-y-auto space-y-1 bg-white shadow-lg"></div>
             </div>
 
-            <!-- 공정 -->
             <div class="relative filter-dropdown-group">
                 <label class="block text-slate-500 mb-1 font-bold">공정</label>
                 <button type="button" onclick="toggleFilterDropdown('processDropdown')" class="w-full flex justify-between items-center border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-left transition">
@@ -115,7 +114,6 @@
                 <div id="processDropdown" class="filter-dropdown-panel hidden mt-1 border border-slate-200 rounded-xl p-2.5 max-h-40 overflow-y-auto space-y-1 bg-white shadow-lg"></div>
             </div>
 
-            <!-- 직급 -->
             <div class="relative filter-dropdown-group">
                 <label class="block text-slate-500 mb-1 font-bold">직급</label>
                 <button type="button" onclick="toggleFilterDropdown('rankDropdown')" class="w-full flex justify-between items-center border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-left transition">
@@ -125,7 +123,6 @@
                 <div id="rankDropdown" class="filter-dropdown-panel hidden mt-1 border border-slate-200 rounded-xl p-2.5 max-h-40 overflow-y-auto space-y-1 bg-white shadow-lg"></div>
             </div>
 
-            <!-- 국적 -->
             <div class="relative filter-dropdown-group">
                 <label class="block text-slate-500 mb-1 font-bold">국적</label>
                 <button type="button" onclick="toggleFilterDropdown('nationalityDropdown')" class="w-full flex justify-between items-center border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 text-left transition">
@@ -135,7 +132,6 @@
                 <div id="nationalityDropdown" class="filter-dropdown-panel hidden mt-1 border border-slate-200 rounded-xl p-2.5 max-h-40 overflow-y-auto space-y-1 bg-white shadow-lg"></div>
             </div>
 
-            <!-- 입사일 -->
             <div>
                 <label class="block text-slate-500 mb-1 font-bold">입사일</label>
                 <div class="flex items-center gap-2">
@@ -145,7 +141,6 @@
                 </div>
             </div>
 
-            <!-- 퇴사일 -->
             <div>
                 <label class="block text-slate-500 mb-1 font-bold">퇴사일</label>
                 <div class="flex items-center gap-2">
@@ -167,120 +162,14 @@
     </div>
 </div>
 
-<!-- 상세 정렬 팝업 모달 (1차 ~ 5차 정렬 기준 + 각 오름/내림차순) -->
+<!-- 1~5차 다중 정렬 모달 -->
 <div id="sortModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         <h3 class="text-xl font-bold mb-4 text-slate-900">📊 정렬 순서 설정 (1차 ~ 5차)</h3>
-        <div class="space-y-3 text-xs font-semibold">
-
-            <!-- 1차 정렬 기준 -->
-            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
-                <label class="block text-slate-700 font-bold">1차 정렬 기준</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <select id="sortCriteria1" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2 outline-none bg-white text-xs font-bold">
-                        <option value="name">성명</option>
-                        <option value="dept">부서</option>
-                        <option value="process">공정</option>
-                        <option value="rank">직급</option>
-                        <option value="hireDate">입사일</option>
-                        <option value="resignDate">퇴사일</option>
-                        <option value="nationality">국적</option>
-                    </select>
-                    <select id="sortDir1" class="border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white text-xs font-bold text-blue-700">
-                        <option value="asc">오름차순 ▲</option>
-                        <option value="desc">내림차순 ▼</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- 2차 정렬 기준 -->
-            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
-                <label class="block text-slate-700 font-bold">2차 정렬 기준</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <select id="sortCriteria2" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2 outline-none bg-white text-xs font-bold">
-                        <option value="">없음</option>
-                        <option value="name">성명</option>
-                        <option value="dept">부서</option>
-                        <option value="process">공정</option>
-                        <option value="rank">직급</option>
-                        <option value="hireDate">입사일</option>
-                        <option value="resignDate">퇴사일</option>
-                        <option value="nationality">국적</option>
-                    </select>
-                    <select id="sortDir2" class="border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white text-xs font-bold text-blue-700">
-                        <option value="asc">오름차순 ▲</option>
-                        <option value="desc">내림차순 ▼</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- 3차 정렬 기준 -->
-            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
-                <label class="block text-slate-700 font-bold">3차 정렬 기준</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <select id="sortCriteria3" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2 outline-none bg-white text-xs font-bold">
-                        <option value="">없음</option>
-                        <option value="name">성명</option>
-                        <option value="dept">부서</option>
-                        <option value="process">공정</option>
-                        <option value="rank">직급</option>
-                        <option value="hireDate">입사일</option>
-                        <option value="resignDate">퇴사일</option>
-                        <option value="nationality">국적</option>
-                    </select>
-                    <select id="sortDir3" class="border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white text-xs font-bold text-blue-700">
-                        <option value="asc">오름차순 ▲</option>
-                        <option value="desc">내림차순 ▼</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- 4차 정렬 기준 -->
-            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
-                <label class="block text-slate-700 font-bold">4차 정렬 기준</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <select id="sortCriteria4" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2 outline-none bg-white text-xs font-bold">
-                        <option value="">없음</option>
-                        <option value="name">성명</option>
-                        <option value="dept">부서</option>
-                        <option value="process">공정</option>
-                        <option value="rank">직급</option>
-                        <option value="hireDate">입사일</option>
-                        <option value="resignDate">퇴사일</option>
-                        <option value="nationality">국적</option>
-                    </select>
-                    <select id="sortDir4" class="border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white text-xs font-bold text-blue-700">
-                        <option value="asc">오름차순 ▲</option>
-                        <option value="desc">내림차순 ▼</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- 5차 정렬 기준 -->
-            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
-                <label class="block text-slate-700 font-bold">5차 정렬 기준</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <select id="sortCriteria5" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2 outline-none bg-white text-xs font-bold">
-                        <option value="">없음</option>
-                        <option value="name">성명</option>
-                        <option value="dept">부서</option>
-                        <option value="process">공정</option>
-                        <option value="rank">직급</option>
-                        <option value="hireDate">입사일</option>
-                        <option value="resignDate">퇴사일</option>
-                        <option value="nationality">국적</option>
-                    </select>
-                    <select id="sortDir5" class="border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white text-xs font-bold text-blue-700">
-                        <option value="asc">오름차순 ▲</option>
-                        <option value="desc">내림차순 ▼</option>
-                    </select>
-                </div>
-            </div>
-
-            <p class="text-[11px] text-slate-400 leading-relaxed">
-                * 부서, 공정, 직급, 국적의 사용자 지정 순서는 <b>[설정 ➔ 정렬 설정]</b>에서 변경할 수 있습니다.
-            </p>
-        </div>
+        <div id="sortLevelsContainer" class="space-y-3 text-xs font-semibold"></div>
+        <p class="text-[11px] text-slate-400 mt-3">
+            * 부서·공정·직급·국적의 사용자 지정 순서는 <b>[설정 ➔ 정렬 순서]</b>에서 관리할 수 있습니다.
+        </p>
         <div class="flex gap-2 mt-5">
             <button onclick="closeModal('sortModal')" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-xs">취소</button>
             <button onclick="applySort()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-xs shadow-md">정렬 적용</button>
@@ -288,18 +177,56 @@
     </div>
 </div>
 
-<!-- 환경 설정 팝업 모달 ('정렬 설정' 포함) -->
+<!-- 탭별 설정 모달 (헤더 순서/추가/삭제 + 정렬 순서 + 엑셀 입출력/양식 다운로드) -->
 <div id="settingsModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
-    <div class="bg-white w-full max-w-xl rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-        <h3 class="text-xl font-bold mb-4 text-slate-900">⚙️ 시스템 설정 및 항목 관리</h3>
-
-        <div class="flex gap-2 mb-4 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
-            <button type="button" id="setTabSortBtn" onclick="switchSettingsTab('sort')" class="flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition">정렬 설정</button>
-            <button type="button" id="setTabInfoBtn" onclick="switchSettingsTab('info')" class="flex-1 py-2 rounded-xl text-slate-600 transition">DB 연동 정보</button>
+    <div class="bg-white w-full max-w-2xl rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-bold text-slate-900">⚙️ <span id="settingsTargetTabLabel">직원명부</span> 설정</h3>
+            <span class="text-xs font-bold text-slate-400">등록 직원: <span id="settingsEmpCount">0</span>명</span>
         </div>
 
-        <!-- 1. 정렬 설정 영역 -->
-        <div id="settingsTabSort" class="space-y-4 text-xs">
+        <div class="flex gap-2 mb-4 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+            <button type="button" id="setTabColumnsBtn" onclick="switchSettingsSubTab('columns')" class="flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition">헤더 관리 & 엑셀</button>
+            <button type="button" id="setTabSortBtn" onclick="switchSettingsSubTab('sort')" class="flex-1 py-2 rounded-xl text-slate-600 transition">정렬 순서</button>
+        </div>
+
+        <!-- 1. 헤더 관리 & 엑셀 -->
+        <div id="settingsSubColumns" class="space-y-4 text-xs">
+            <div class="bg-blue-50/70 border border-blue-100 p-3.5 rounded-2xl space-y-2">
+                <p class="font-bold text-blue-900">📊 엑셀 Data 관리 (현재 헤더 순서 기준)</p>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="exportCurrentTabToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl font-bold transition">⬇ Data 내보내기 (.xlsx)</button>
+                    <button type="button" onclick="triggerExcelUpload()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl font-bold transition">⬆ Data 불러오기 (.xlsx)</button>
+                    <button type="button" onclick="downloadExcelTemplate()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3.5 py-2 rounded-xl font-bold transition">📄 업로드용 양식 다운로드</button>
+                </div>
+                <p class="text-[11px] text-slate-500">
+                    * 내보내기는 현재 조절된 헤더 순서로 내려받으며, 불러오기는 업로드 파일의 헤더 순서·이름을 기준으로 매칭합니다.
+                </p>
+            </div>
+
+            <div class="space-y-2">
+                <label class="font-bold text-slate-700 block">새 항목 추가 (연동 시트 3행 헤더 반영)</label>
+                <div class="flex gap-2">
+                    <input type="text" id="newColumnNameInput" placeholder="예: 비상연락망, 비고2 등" class="flex-1 border border-slate-200 rounded-xl px-3.5 py-2 text-xs outline-none">
+                    <button type="button" onclick="handleAddColumn()" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl font-bold transition">+ 항목 추가</button>
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                    <span class="font-bold text-slate-700">표시 항목 순서 및 삭제 (드래그 또는 ▲/▼)</span>
+                    <button type="button" onclick="resetCurrentTabColumns()" class="text-[11px] text-slate-500 underline">기본 순서 복원</button>
+                </div>
+                <div id="columnOrderListContainer" class="border border-slate-200 rounded-2xl p-2.5 bg-slate-50 max-h-60 overflow-y-auto space-y-1.5"></div>
+            </div>
+
+            <div class="flex gap-2 pt-1">
+                <button type="button" onclick="saveCurrentTabColumns()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold shadow-md transition">헤더 순서 저장</button>
+            </div>
+        </div>
+
+        <!-- 2. 사용자 지정 정렬 순서 -->
+        <div id="settingsSubSort" class="hidden space-y-4 text-xs">
             <div class="flex items-center justify-between gap-2">
                 <span class="font-bold text-slate-600">순서 변경 대상 항목</span>
                 <div class="flex gap-1.5">
@@ -311,28 +238,14 @@
             </div>
 
             <p class="text-[11px] text-slate-400">
-                직원명부 데이터에서 자동으로 불러온 목록입니다. 항목을 드래그하거나 ▲ / ▼ 버튼으로 순서를 맞추세요.
+                직원명부 데이터에서 자동으로 불러온 목록입니다. 드래그하거나 ▲/▼ 버튼으로 순서를 지정하세요.
             </p>
 
-            <div id="customOrderListContainer" class="border border-slate-200 rounded-2xl p-2.5 bg-slate-50 max-h-64 overflow-y-auto space-y-1.5"></div>
+            <div id="customOrderListContainer" class="border border-slate-200 rounded-2xl p-2.5 bg-slate-50 max-h-60 overflow-y-auto space-y-1.5"></div>
 
-            <div class="flex gap-2 pt-2">
+            <div class="flex gap-2 pt-1">
                 <button type="button" onclick="resetCurrentCustomOrder()" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition">가나다순 초기화</button>
                 <button type="button" onclick="saveCustomOrderSettings()" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold shadow-md hover:bg-blue-700 transition">정렬 순서 저장</button>
-            </div>
-        </div>
-
-        <!-- 2. DB 연동 정보 영역 -->
-        <div id="settingsTabInfo" class="hidden space-y-4 text-xs text-slate-600">
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
-                <p class="font-bold text-slate-800">📌 데이터베이스 연동 현황</p>
-                <p>• 연결 시트: 직원명부, 급여관리, 휴가관리, 징계/포상</p>
-                <p>• 헤더 인식 기준: 3행 (Row 3)</p>
-                <p class="text-blue-600 font-bold mt-2">• 현재 등록된 직원 수: <span id="settingsEmpCount">0</span>명</p>
-            </div>
-            <div class="space-y-1">
-                <p class="font-bold text-slate-700">관리자 도구</p>
-                <button onclick="refreshMasterData()" class="w-full bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold hover:bg-slate-300 transition">🔄 마스터 데이터 및 항목 목록 새로고침</button>
             </div>
         </div>
 
@@ -342,6 +255,101 @@
     </div>
 </div>
 
+<!-- 휴가 등록 모달 -->
+<div id="vacationModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <h3 class="text-xl font-bold mb-4 text-slate-900">🏖️ 휴가 사용내역 기록</h3>
+        <div class="grid grid-cols-2 gap-3 text-xs font-semibold">
+            <div>
+                <label class="block text-slate-500 mb-1">직원 선택</label>
+                <select id="vEmpSelect" onchange="onVacationEmployeeSelect()" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs bg-white"></select>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1">사번</label>
+                <input type="text" id="vEmpId" readonly class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs bg-slate-50">
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1">귀속연도</label>
+                <input type="text" id="vYear" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs">
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1">휴가구분</label>
+                <select id="vType" onchange="onVacationTypeChange()" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs bg-white">
+                    <option value="연차">연차 (1일)</option>
+                    <option value="오전반차">오전반차 (0.5일)</option>
+                    <option value="오후반차">오후반차 (0.5일)</option>
+                    <option value="기타">기타</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1">사용일수(일)</label>
+                <input type="number" step="0.5" id="vDays" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs">
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1">휴가시작일</label>
+                <div id="date-vStart"></div>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1">휴가종료일</label>
+                <div id="date-vEnd"></div>
+            </div>
+            <div class="col-span-2">
+                <label class="block text-slate-500 mb-1">휴가사유</label>
+                <input type="text" id="vReason" placeholder="개인사정, 병원진료 등" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs">
+            </div>
+        </div>
+        <div class="flex gap-2 mt-6">
+            <button onclick="closeModal('vacationModal')" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-xs">취소</button>
+            <button onclick="saveVacationData()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-xs shadow-md">휴가 기록 저장</button>
+        </div>
+    </div>
+</div>
+
+<!-- 직원 연차 현황 상세 모달 -->
+<div id="leaveSummaryModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-3">
+            <h3 id="leaveModalTitle" class="text-xl font-bold text-slate-900">연차 현황</h3>
+            <span id="leaveBasisBadge" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700"></span>
+        </div>
+        <p id="leaveModalSub" class="text-xs text-slate-500 mb-4"></p>
+
+        <div class="grid grid-cols-3 gap-3 mb-4 text-center">
+            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <p class="text-[11px] text-slate-400 font-bold">총 발생 연차</p>
+                <p id="leaveTotalDays" class="text-lg font-black text-slate-800 mt-1">0일</p>
+            </div>
+            <div class="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-100">
+                <p class="text-[11px] text-amber-700 font-bold">사용 연차</p>
+                <p id="leaveUsedDays" class="text-lg font-black text-amber-700 mt-1">0일</p>
+            </div>
+            <div class="bg-emerald-50 p-3.5 rounded-2xl border border-emerald-100">
+                <p class="text-[11px] text-emerald-700 font-bold">잔여 연차</p>
+                <p id="leaveRemainDays" class="text-lg font-black text-emerald-700 mt-1">0일</p>
+            </div>
+        </div>
+
+        <p class="text-[11px] text-slate-400 mb-2" id="leaveRuleNote"></p>
+
+        <div class="border border-slate-200 rounded-2xl overflow-hidden max-h-52 overflow-y-auto">
+            <table class="w-full text-xs text-center">
+                <thead class="bg-slate-100 text-slate-600 font-bold">
+                    <tr>
+                        <th class="p-2.5">구분</th>
+                        <th class="p-2.5">기간</th>
+                        <th class="p-2.5">일수</th>
+                        <th class="p-2.5 text-left">사유</th>
+                    </tr>
+                </thead>
+                <tbody id="leaveHistoryBody" class="divide-y divide-slate-100"></tbody>
+            </table>
+        </div>
+
+        <button onclick="closeModal('leaveSummaryModal')" class="w-full mt-5 bg-slate-900 text-white py-3 rounded-xl font-bold text-xs">닫기</button>
+    </div>
+</div>
+
+<!-- 메인 컨테이너 -->
 <div class="max-w-[1600px] mx-auto pb-24">
     <header class="flex justify-between items-center mb-6">
         <div>
@@ -372,104 +380,59 @@
     <div id="tab-emp" class="tab-content active space-y-4">
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
             <div class="flex items-center gap-2 flex-wrap">
-                <button onclick="openModal('filterModal')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
-                    🔍 필터 ▾
-                </button>
-                <button onclick="openModal('sortModal')" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
-                    📊 정렬 ▾
-                </button>
+                <button onclick="openModal('filterModal')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">🔍 필터 ▾</button>
+                <button onclick="openSortModal()" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">📊 정렬 ▾</button>
                 <span id="filterStatusBadge" class="text-xs text-slate-400 font-semibold ml-2">전체 데이터 표시 중</span>
                 <span id="sortStatusBadge" class="text-xs text-blue-600 font-semibold ml-1"></span>
             </div>
-            <div>
-                <button onclick="openModal('settingsModal')" class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
-                    ⚙️ 설정
-                </button>
-            </div>
+            <button onclick="openTabSettings('emp')" class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2.5 rounded-xl font-bold text-xs transition">⚙️ 설정</button>
         </div>
-
         <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-x-auto">
             <table class="w-full text-left whitespace-nowrap">
-                <thead class="bg-slate-900 text-white text-xs font-bold text-center">
-                    <tr>
-                        <th class="p-4">사번</th>
-                        <th class="p-4 text-left pl-8">성명 (부서/공정/직급)</th>
-                        <th class="p-4">주민등록/외국인번호</th>
-                        <th class="p-4">나이</th>
-                        <th class="p-4">성별</th>
-                        <th class="p-4">입사일</th>
-                        <th class="p-4">퇴사일</th>
-                        <th class="p-4">재직상태</th>
-                        <th class="p-4">급여형태</th>
-                        <th class="p-4">연차기준</th>
-                        <th class="p-4">메모</th>
-                        <th class="p-4">관리</th>
-                    </tr>
-                </thead>
+                <thead id="empTableHead" class="bg-slate-900 text-white text-xs font-bold text-center"></thead>
                 <tbody id="empTableBody" class="divide-y divide-slate-100 text-sm font-medium text-slate-700 text-center"></tbody>
             </table>
         </div>
     </div>
 
     <!-- 2. 급여관리 탭 -->
-    <div id="tab-salary" class="tab-content">
+    <div id="tab-salary" class="tab-content space-y-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-end items-center">
+            <button onclick="openTabSettings('salary')" class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2.5 rounded-xl font-bold text-xs transition">⚙️ 설정</button>
+        </div>
         <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-x-auto">
             <table class="w-full text-left whitespace-nowrap">
-                <thead class="bg-slate-900 text-white text-xs font-bold text-center">
-                    <tr>
-                        <th class="p-4">사번</th>
-                        <th class="p-4">성명</th>
-                        <th class="p-4">귀속연월</th>
-                        <th class="p-4">급여형태</th>
-                        <th class="p-4">기본급</th>
-                        <th class="p-4">연장근로수당</th>
-                        <th class="p-4">야간근로수당</th>
-                        <th class="p-4">휴일근로수당</th>
-                        <th class="p-4">직책수당</th>
-                        <th class="p-4">지급총액</th>
-                    </tr>
-                </thead>
+                <thead id="salaryTableHead" class="bg-slate-900 text-white text-xs font-bold text-center"></thead>
                 <tbody id="salaryTableBody" class="divide-y divide-slate-100 text-sm font-medium text-slate-700 text-center"></tbody>
             </table>
         </div>
     </div>
 
     <!-- 3. 휴가관리 탭 -->
-    <div id="tab-vacation" class="tab-content">
+    <div id="tab-vacation" class="tab-content space-y-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <button onclick="openVacationForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition">+ 휴가 사용내역 기록</button>
+                <span class="text-xs text-slate-400 font-semibold ml-2">직원 이름을 클릭하면 총/사용/잔여 연차를 확인할 수 있습니다.</span>
+            </div>
+            <button onclick="openTabSettings('vacation')" class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2.5 rounded-xl font-bold text-xs transition">⚙️ 설정</button>
+        </div>
         <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-x-auto">
             <table class="w-full text-left whitespace-nowrap">
-                <thead class="bg-slate-900 text-white text-xs font-bold text-center">
-                    <tr>
-                        <th class="p-4">사번</th>
-                        <th class="p-4">성명</th>
-                        <th class="p-4">귀속연도</th>
-                        <th class="p-4">휴가구분</th>
-                        <th class="p-4">사용시간</th>
-                        <th class="p-4">휴가시작일</th>
-                        <th class="p-4">휴가종료일</th>
-                        <th class="p-4">휴가사유</th>
-                    </tr>
-                </thead>
+                <thead id="vacationTableHead" class="bg-slate-900 text-white text-xs font-bold text-center"></thead>
                 <tbody id="vacationTableBody" class="divide-y divide-slate-100 text-sm font-medium text-slate-700 text-center"></tbody>
             </table>
         </div>
     </div>
 
     <!-- 4. 징계/포상 탭 -->
-    <div id="tab-discipline" class="tab-content">
+    <div id="tab-discipline" class="tab-content space-y-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-end items-center">
+            <button onclick="openTabSettings('discipline')" class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2.5 rounded-xl font-bold text-xs transition">⚙️ 설정</button>
+        </div>
         <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-x-auto">
             <table class="w-full text-left whitespace-nowrap">
-                <thead class="bg-slate-900 text-white text-xs font-bold text-center">
-                    <tr>
-                        <th class="p-4">사번</th>
-                        <th class="p-4">성명</th>
-                        <th class="p-4">구분</th>
-                        <th class="p-4">종류</th>
-                        <th class="p-4">처분일자</th>
-                        <th class="p-4">사유</th>
-                        <th class="p-4">조치내용</th>
-                    </tr>
-                </thead>
+                <thead id="disciplineTableHead" class="bg-slate-900 text-white text-xs font-bold text-center"></thead>
                 <tbody id="disciplineTableBody" class="divide-y divide-slate-100 text-sm font-medium text-slate-700 text-center"></tbody>
             </table>
         </div>
@@ -481,11 +444,11 @@
     + 신규 입사자 등록
 </button>
 
-<!-- 내국인/외국인 동적 신규 등록 및 수정 모달 -->
+<!-- 직원 신규 등록/수정 모달 -->
 <div id="hrModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white w-full max-w-xl rounded-3xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
         <h3 id="formTitle" class="text-2xl font-bold mb-4 text-slate-900">직원 정보 입력</h3>
-        
+
         <div id="nationalityTypeToggle" class="flex gap-4 mb-6 bg-slate-100 p-1.5 rounded-2xl text-xs font-bold">
             <button type="button" onclick="setFormNationality('inland')" id="toggleInland" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white shadow-sm transition">🇰🇷 내국인 근로자</button>
             <button type="button" onclick="setFormNationality('foreigner')" id="toggleForeigner" class="flex-1 py-2.5 rounded-xl text-slate-600 transition">🌐 외국인 근로자</button>
@@ -493,7 +456,7 @@
 
         <div class="grid grid-cols-2 gap-4 text-xs font-semibold">
             <div><label class="block text-slate-500 mb-1">사번</label><input type="text" id="fId" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
-            
+
             <div id="divInlandName"><label class="block text-slate-500 mb-1">성명(한글)</label><input type="text" id="fName" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div id="divForeignerName" class="hidden"><label class="block text-slate-500 mb-1">성명(영문)</label><input type="text" id="fEnglishName" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="FULL NAME"></div>
 
@@ -504,8 +467,9 @@
             <div><label class="block text-slate-500 mb-1">부서</label><input type="text" id="fDept" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div><label class="block text-slate-500 mb-1">공정</label><input type="text" id="fProcess" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div><label class="block text-slate-500 mb-1">직위</label><input type="text" id="fRank" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
+            <div><label class="block text-slate-500 mb-1">연락처</label><input type="text" id="fPhone" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="010-0000-0000"></div>
             <div><label class="block text-slate-500 mb-1">주민등록/외국인번호</label><input type="text" id="fRegNo" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="000000-0000000"></div>
-            
+
             <div>
                 <label class="block text-slate-500 mb-1">입사일</label>
                 <div id="date-fDate"></div>
@@ -518,7 +482,7 @@
             <div><label class="block text-slate-500 mb-1">재직상태</label><select id="fStatus" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white"><option value="재직">재직</option><option value="퇴사">퇴사</option></select></div>
             <div><label class="block text-slate-500 mb-1">급여형태</label><input type="text" id="fSalaryType" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="시급제/연봉제"></div>
             <div><label class="block text-slate-500 mb-1">연차기준</label><select id="fAnnualBasis" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white"><option value="입사일">입사일</option><option value="회계연도">회계연도</option></select></div>
-            
+
             <div class="col-span-2">
                 <label class="block text-slate-500 mb-1">메모</label>
                 <textarea id="fMemo" rows="3" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none resize-none" placeholder="특이사항 및 메모 입력..."></textarea>
@@ -533,24 +497,56 @@
 </div>
 
 <script>
+    // ==========================================
+    // ⚙️ 연차 계산 정책 상수 (향후 회사 규정에 맞게 수정 가능)
+    // ==========================================
+    const LEAVE_POLICY = {
+        BASE_ANNUAL_DAYS: 15,
+        MAX_ANNUAL_DAYS: 25,
+        MAX_UNDER_ONE_YEAR_MONTHLY: 11,
+        BONUS_STEP_YEARS: 2
+    };
+
+    const TAB_LABELS = {
+        emp: '직원명부',
+        salary: '급여관리',
+        vacation: '휴가관리',
+        discipline: '징계/포상'
+    };
+
+    const SHEET_NAMES = {
+        emp: '직원명부',
+        salary: '급여관리',
+        vacation: '휴가관리',
+        discipline: '징계/포상'
+    };
+
+    const DEFAULT_TAB_COLUMNS = {
+        emp: ['사번', '성명(요약)', '연락처', '주민등록번호/외국인번호', '나이', '성별', '입사일', '퇴사일', '재직상태', '급여형태', '연차기준', '메모', '관리'],
+        salary: ['사번', '성명', '귀속연월', '급여형태', '기본급', '연장근로수당', '야간근로수당', '휴일근로수당', '직책수당', '지급총액'],
+        vacation: ['사번', '성명', '귀속연도', '휴가구분', '사용일수', '휴가시작일', '휴가종료일', '휴가사유'],
+        discipline: ['사번', '성명', '구분', '종류', '처분일자', '사유', '조치내용']
+    };
+
+    const PROTECTED_COLUMNS = new Set(['사번', '성명', '성명(요약)', '관리']);
+
+    const STORAGE_KEYS = {
+        customOrders: 'cenit_custom_sort_orders_v3',
+        tabColumns: 'cenit_tab_columns_v3'
+    };
+
     let dbData = { employees: [], salary: [], vacation: [], discipline: [] };
     let isMasked = true;
     let currentFormMode = 'inland';
+    let currentActiveTab = 'emp';
+    let currentSettingsTab = 'emp';
 
-    // 다중 필터 상태
     let filterState = {
-        depts: [],
-        processes: [],
-        ranks: [],
-        nationalities: [],
-        hireStart: '',
-        hireEnd: '',
-        resignStart: '',
-        resignEnd: '',
+        depts: [], processes: [], ranks: [], nationalities: [],
+        hireStart: '', hireEnd: '', resignStart: '', resignEnd: '',
         excludeResigned: true
     };
 
-    // 1차 ~ 5차 다중 정렬 상태
     const SORT_LEVEL_COUNT = 5;
     let sortConfig = [
         { criteria: 'name', direction: 'asc' },
@@ -560,30 +556,24 @@
         { criteria: '', direction: 'asc' }
     ];
 
-    // 사용자 지정 순서 (부서, 공정, 직급, 국적)
-    const STORAGE_KEY_CUSTOM_ORDERS = 'cenit_custom_sort_orders_v1';
-    let customOrders = loadCustomOrders();
+    let customOrders = loadJsonStorage(STORAGE_KEYS.customOrders, { dept: [], process: [], rank: [], nationality: [] });
+    let tabColumnsConfig = loadJsonStorage(STORAGE_KEYS.tabColumns, JSON.parse(JSON.stringify(DEFAULT_TAB_COLUMNS)));
+
     let currentOrderCategory = 'dept';
     let draftOrderList = [];
+    let draftColumnsList = [];
 
-    function loadCustomOrders() {
+    function loadJsonStorage(key, fallback) {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_ORDERS);
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                return {
-                    dept: Array.isArray(parsed.dept) ? parsed.dept : [],
-                    process: Array.isArray(parsed.process) ? parsed.process : [],
-                    rank: Array.isArray(parsed.rank) ? parsed.rank : [],
-                    nationality: Array.isArray(parsed.nationality) ? parsed.nationality : []
-                };
-            }
-        } catch (e) {}
-        return { dept: [], process: [], rank: [], nationality: [] };
+            const raw = localStorage.getItem(key);
+            return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
+        } catch (e) {
+            return fallback;
+        }
     }
 
-    function saveCustomOrdersToStorage() {
-        localStorage.setItem(STORAGE_KEY_CUSTOM_ORDERS, JSON.stringify(customOrders));
+    function saveJsonStorage(key, value) {
+        localStorage.setItem(key, JSON.stringify(value));
     }
 
     // ==========================================
@@ -610,20 +600,12 @@
 
         yEl.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value.length === 4) {
-                mEl.focus();
-                mEl.select();
-            }
+            if (this.value.length === 4) { mEl.focus(); mEl.select(); }
         });
-
         mEl.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9]/g, '');
-            if (this.value.length === 2) {
-                dEl.focus();
-                dEl.select();
-            }
+            if (this.value.length === 2) { dEl.focus(); dEl.select(); }
         });
-
         dEl.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9]/g, '');
         });
@@ -632,15 +614,11 @@
             el.addEventListener('keydown', function(e) {
                 if (e.key === 'Backspace') {
                     e.preventDefault();
-                    yEl.value = '';
-                    mEl.value = '';
-                    dEl.value = '';
+                    yEl.value = ''; mEl.value = ''; dEl.value = '';
                     yEl.focus();
                 }
             });
-            el.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
+            el.addEventListener('click', function(e) { e.stopPropagation(); });
         });
     }
 
@@ -659,14 +637,8 @@
         const dEl = document.getElementById(`${fieldId}_d`);
         if (!yEl || !mEl || !dEl) return;
 
-        if (!dateStr) {
-            yEl.value = '';
-            mEl.value = '';
-            dEl.value = '';
-            return;
-        }
-        const cleanDate = String(dateStr).split('T')[0];
-        const parts = cleanDate.split('-');
+        if (!dateStr) { yEl.value = ''; mEl.value = ''; dEl.value = ''; return; }
+        const parts = String(dateStr).split('T')[0].split('-');
         yEl.value = parts[0] || '';
         mEl.value = parts[1] || '';
         dEl.value = parts[2] || '';
@@ -684,15 +656,13 @@
     }
 
     window.onload = function() {
-        initCustomDateInput('date-filterHireStart', 'filterHireStart');
-        initCustomDateInput('date-filterHireEnd', 'filterHireEnd');
-        initCustomDateInput('date-filterResignStart', 'filterResignStart');
-        initCustomDateInput('date-filterResignEnd', 'filterResignEnd');
-        initCustomDateInput('date-fDate', 'fDate');
-        initCustomDateInput('date-fResignDate', 'fResignDate');
+        ['filterHireStart', 'filterHireEnd', 'filterResignStart', 'filterResignEnd', 'fDate', 'fResignDate', 'vStart', 'vEnd'].forEach(id => {
+            initCustomDateInput(`date-${id}`, id);
+        });
+        renderSortModalInputs();
 
         const savedUser = localStorage.getItem('cenit_logged_user');
-        if(savedUser) {
+        if (savedUser) {
             document.getElementById('loginOverlay').classList.add('hidden');
             document.getElementById('currentUserDisplay').innerText = `👤 접속자: ${savedUser} 님`;
             fetchAllData();
@@ -700,15 +670,101 @@
     };
 
     // ==========================================
-    // 🔽 필터 드롭다운 및 '전체' 체크박스 연동
+    // 🔄 공통 API / 모달 / 탭
+    // ==========================================
+    async function callGasApi(payload) {
+        if (!GAS_API_URL || GAS_API_URL === "YOUR_GAS_WEB_APP_URL_HERE") {
+            throw new Error("GAS_API_URL이 설정되지 않았습니다.");
+        }
+        const res = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        return await res.json();
+    }
+
+    function showLoading(text) {
+        document.getElementById('loadingText').innerText = text || '처리 중...';
+        document.getElementById('loadingModal').classList.add('show');
+    }
+    function hideLoading() { document.getElementById('loadingModal').classList.remove('show'); }
+    function showCustomAlert(msg) {
+        document.getElementById('alertMessageText').innerText = msg;
+        document.getElementById('customAlertModal').classList.add('show');
+    }
+    function closeCustomAlert() { document.getElementById('customAlertModal').classList.remove('show'); }
+    function openModal(id) { document.getElementById(id).classList.add('show'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+    async function handleLogin() {
+        const id = document.getElementById('loginId').value.trim();
+        const pw = document.getElementById('loginPw').value.trim();
+        if (!id || !pw) return showCustomAlert('ID와 Password를 입력해주세요.');
+
+        showLoading('로그인 확인 중...');
+        try {
+            const result = await callGasApi({ action: 'login', id, pw });
+            hideLoading();
+            if (result.success) {
+                localStorage.setItem('cenit_logged_user', id);
+                document.getElementById('loginOverlay').classList.add('hidden');
+                document.getElementById('currentUserDisplay').innerText = `👤 접속자: ${id} 님`;
+                fetchAllData();
+            } else {
+                showCustomAlert('ID 또는 Password가 일치하지 않습니다.');
+            }
+        } catch (e) {
+            hideLoading();
+            showCustomAlert('통신 오류: ' + e.message);
+        }
+    }
+
+    function handleLogout() {
+        localStorage.removeItem('cenit_logged_user');
+        document.getElementById('loginId').value = '';
+        document.getElementById('loginPw').value = '';
+        document.getElementById('loginOverlay').classList.remove('hidden');
+    }
+
+    async function fetchAllData() {
+        showLoading('데이터 동기화 중...');
+        try {
+            const res = await fetch(GAS_API_URL);
+            const data = await res.json();
+            dbData = {
+                employees: Array.isArray(data.employees) ? data.employees : [],
+                salary: Array.isArray(data.salary) ? data.salary : [],
+                vacation: Array.isArray(data.vacation) ? data.vacation : [],
+                discipline: Array.isArray(data.discipline) ? data.discipline : []
+            };
+            hideLoading();
+            syncCustomOrdersWithData();
+            populateFilterCheckboxes();
+            renderAllTables();
+        } catch (e) {
+            hideLoading();
+            console.error(e);
+            showCustomAlert('데이터 불러오기 실패: ' + e.message);
+        }
+    }
+
+    function switchTab(tabId) {
+        currentActiveTab = tabId;
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+        document.getElementById('btn-' + tabId).classList.add('active');
+        document.getElementById('floatingAddBtn').style.display = (tabId === 'emp') ? 'flex' : 'none';
+    }
+
+    // ==========================================
+    // 🔽 필터 & '전체' 체크박스
     // ==========================================
     function toggleFilterDropdown(dropdownId) {
         const target = document.getElementById(dropdownId);
         const isHidden = target.classList.contains('hidden');
         document.querySelectorAll('.filter-dropdown-panel').forEach(p => p.classList.add('hidden'));
-        if (isHidden) {
-            target.classList.remove('hidden');
-        }
+        if (isHidden) target.classList.remove('hidden');
     }
 
     document.addEventListener('click', function(e) {
@@ -720,6 +776,197 @@
     function getNormalizedNationality(emp) {
         const raw = (emp.국적 || '').trim();
         return raw === '' ? '대한민국' : raw;
+    }
+
+    function getEmployeeDisplayName(emp) {
+        if (!emp) return '-';
+        return emp['성명(한글)'] || emp['사내호칭'] || emp['성명(영문)'] || emp.성명 || '-';
+    }
+
+    function populateFilterCheckboxes() {
+        const sets = {
+            dept: new Set(),
+            process: new Set(),
+            rank: new Set(),
+            nationality: new Set()
+        };
+
+        (dbData.employees || []).forEach(emp => {
+            if (emp.부서) sets.dept.add(String(emp.부서).trim());
+            if (emp.공정) sets.process.add(String(emp.공정).trim());
+            if (emp.직위) sets.rank.add(String(emp.직위).trim());
+            sets.nationality.add(getNormalizedNationality(emp));
+        });
+
+        const map = [
+            ['deptDropdown', sets.dept, 'fDeptChk', filterState.depts],
+            ['processDropdown', sets.process, 'fProcChk', filterState.processes],
+            ['rankDropdown', sets.rank, 'fRankChk', filterState.ranks],
+            ['nationalityDropdown', sets.nationality, 'fNatChk', filterState.nationalities]
+        ];
+
+        map.forEach(([containerId, setVal, prefix, selectedArr]) => {
+            const el = document.getElementById(containerId);
+            const activeSelected = (selectedArr || []).filter(v => setVal.has(v));
+            const isAllChecked = activeSelected.length === 0;
+
+            el.innerHTML = `
+                <label class="flex items-center gap-2 cursor-pointer hover:bg-blue-50/70 px-2 py-1.5 rounded-lg border-b border-slate-100 mb-1 font-bold text-blue-700">
+                    <input type="checkbox" id="${prefix}_all" onchange="handleAllCheckboxChange('${prefix}')" class="rounded border-slate-300 text-blue-600" ${isAllChecked ? 'checked' : ''}>
+                    <span>전체</span>
+                </label>`;
+
+            if (setVal.size === 0) {
+                el.innerHTML += `<span class="text-slate-400 text-xs px-2 py-1 block">데이터 없음</span>`;
+                return;
+            }
+
+            setVal.forEach(val => {
+                const checkedAttr = activeSelected.includes(val) ? 'checked' : '';
+                el.innerHTML += `
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1.5 rounded-lg">
+                        <input type="checkbox" name="${prefix}" value="${val}" onchange="handleItemCheckboxChange('${prefix}')" class="rounded border-slate-300 text-blue-600" ${checkedAttr}>
+                        <span class="text-slate-700">${val}</span>
+                    </label>`;
+            });
+        });
+        updateFilterDropdownSummaries();
+    }
+
+    function handleAllCheckboxChange(prefix) {
+        const allCb = document.getElementById(`${prefix}_all`);
+        const items = document.querySelectorAll(`input[name="${prefix}"]`);
+        if (allCb.checked) {
+            items.forEach(cb => cb.checked = false);
+        } else if (!Array.from(items).some(cb => cb.checked)) {
+            allCb.checked = true;
+        }
+        updateFilterDropdownSummaries();
+    }
+
+    function handleItemCheckboxChange(prefix) {
+        const allCb = document.getElementById(`${prefix}_all`);
+        const checked = Array.from(document.querySelectorAll(`input[name="${prefix}"]:checked`));
+        allCb.checked = checked.length === 0;
+        updateFilterDropdownSummaries();
+    }
+
+    function updateFilterDropdownSummaries() {
+        const pairs = [
+            ['fDeptChk', 'deptSummaryText'],
+            ['fProcChk', 'processSummaryText'],
+            ['fRankChk', 'rankSummaryText'],
+            ['fNatChk', 'nationalitySummaryText']
+        ];
+        pairs.forEach(([prefix, summaryId]) => {
+            const allCb = document.getElementById(`${prefix}_all`);
+            const checked = Array.from(document.querySelectorAll(`input[name="${prefix}"]:checked`));
+            const el = document.getElementById(summaryId);
+            if (!el) return;
+            if ((allCb && allCb.checked) || checked.length === 0) el.innerText = '전체';
+            else if (checked.length === 1) el.innerText = checked[0].value;
+            else el.innerText = `${checked[0].value} 외 ${checked.length - 1}건`;
+        });
+    }
+
+    function applyFilter() {
+        const getVals = (prefix) => {
+            const allCb = document.getElementById(`${prefix}_all`);
+            if (allCb && allCb.checked) return [];
+            return Array.from(document.querySelectorAll(`input[name="${prefix}"]:checked`)).map(cb => cb.value);
+        };
+
+        filterState = {
+            depts: getVals('fDeptChk'),
+            processes: getVals('fProcChk'),
+            ranks: getVals('fRankChk'),
+            nationalities: getVals('fNatChk'),
+            hireStart: getCustomDateValue('filterHireStart'),
+            hireEnd: getCustomDateValue('filterHireEnd'),
+            resignStart: getCustomDateValue('filterResignStart'),
+            resignEnd: getCustomDateValue('filterResignEnd'),
+            excludeResigned: document.getElementById('filterExcludeResigned').checked
+        };
+
+        closeModal('filterModal');
+        const isDefault =
+            !filterState.depts.length && !filterState.processes.length &&
+            !filterState.ranks.length && !filterState.nationalities.length &&
+            !filterState.hireStart && !filterState.hireEnd &&
+            !filterState.resignStart && !filterState.resignEnd &&
+            filterState.excludeResigned;
+
+        document.getElementById('filterStatusBadge').innerText = isDefault ? '전체 데이터 표시 중' : '상세 필터 적용됨';
+        renderEmpTable();
+    }
+
+    function resetFilter() {
+        ['fDeptChk', 'fProcChk', 'fRankChk', 'fNatChk'].forEach(prefix => {
+            const allCb = document.getElementById(`${prefix}_all`);
+            if (allCb) allCb.checked = true;
+            document.querySelectorAll(`input[name="${prefix}"]`).forEach(cb => cb.checked = false);
+        });
+        document.getElementById('filterExcludeResigned').checked = true;
+        ['filterHireStart', 'filterHireEnd', 'filterResignStart', 'filterResignEnd'].forEach(id => setCustomDateValue(id, ''));
+        updateFilterDropdownSummaries();
+
+        filterState = { depts: [], processes: [], ranks: [], nationalities: [], hireStart: '', hireEnd: '', resignStart: '', resignEnd: '', excludeResigned: true };
+        closeModal('filterModal');
+        document.getElementById('filterStatusBadge').innerText = '전체 데이터 표시 중';
+        renderEmpTable();
+    }
+
+    // ==========================================
+    // 📊 1~5차 정렬 & 사용자 지정 순서
+    // ==========================================
+    function renderSortModalInputs() {
+        const container = document.getElementById('sortLevelsContainer');
+        container.innerHTML = '';
+        const optionsHtml = `
+            <option value="name">성명</option>
+            <option value="dept">부서</option>
+            <option value="process">공정</option>
+            <option value="rank">직급</option>
+            <option value="hireDate">입사일</option>
+            <option value="resignDate">퇴사일</option>
+            <option value="nationality">국적</option>
+        `;
+
+        for (let i = 0; i < SORT_LEVEL_COUNT; i++) {
+            const n = i + 1;
+            const noneOption = i === 0 ? '' : '<option value="">없음</option>';
+            container.innerHTML += `
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
+                    <label class="block text-slate-700 font-bold">${n}차 정렬 기준</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <select id="sortCriteria${n}" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2 outline-none bg-white text-xs font-bold">
+                            ${noneOption}${optionsHtml}
+                        </select>
+                        <select id="sortDir${n}" class="border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white text-xs font-bold text-blue-700">
+                            <option value="asc">오름차순 ▲</option>
+                            <option value="desc">내림차순 ▼</option>
+                        </select>
+                    </div>
+                </div>`;
+        }
+    }
+
+    function openSortModal() {
+        for (let i = 0; i < SORT_LEVEL_COUNT; i++) {
+            const n = i + 1;
+            document.getElementById(`sortCriteria${n}`).value = sortConfig[i]?.criteria ?? (i === 0 ? 'name' : '');
+            document.getElementById(`sortDir${n}`).value = sortConfig[i]?.direction || 'asc';
+        }
+        openModal('sortModal');
+    }
+
+    function applySort() {
+        sortConfig = Array.from({ length: SORT_LEVEL_COUNT }, (_, i) => ({
+            criteria: i === 0 ? (document.getElementById(`sortCriteria${i + 1}`).value || 'name') : document.getElementById(`sortCriteria${i + 1}`).value,
+            direction: document.getElementById(`sortDir${i + 1}`).value || 'asc'
+        }));
+        closeModal('sortModal');
+        renderEmpTable();
     }
 
     function extractUniqueValuesFromEmployees(category) {
@@ -735,484 +982,13 @@
 
     function syncCustomOrdersWithData() {
         ['dept', 'process', 'rank', 'nationality'].forEach(cat => {
-            const existingValues = extractUniqueValuesFromEmployees(cat);
-            const savedList = customOrders[cat] || [];
-            const merged = savedList.filter(v => existingValues.includes(v));
-            existingValues.forEach(v => {
-                if (!merged.includes(v)) merged.push(v);
-            });
+            const existing = extractUniqueValuesFromEmployees(cat);
+            const saved = customOrders[cat] || [];
+            const merged = saved.filter(v => existing.includes(v));
+            existing.forEach(v => { if (!merged.includes(v)) merged.push(v); });
             customOrders[cat] = merged;
         });
-        saveCustomOrdersToStorage();
-    }
-
-    function populateFilterCheckboxes() {
-        const depts = new Set();
-        const processes = new Set();
-        const ranks = new Set();
-        const nationalities = new Set();
-
-        (dbData.employees || []).forEach(emp => {
-            if(emp.부서) depts.add(emp.부서);
-            if(emp.공정) processes.add(emp.공정);
-            if(emp.직위) ranks.add(emp.직위);
-            nationalities.add(getNormalizedNationality(emp));
-        });
-
-        const fillDropdownCheckboxes = (containerId, setVal, prefix) => {
-            const el = document.getElementById(containerId);
-            el.innerHTML = '';
-
-            el.innerHTML += `
-                <label class="flex items-center gap-2 cursor-pointer hover:bg-blue-50/70 px-2 py-1.5 rounded-lg border-b border-slate-100 mb-1 font-bold text-blue-700">
-                    <input type="checkbox" id="${prefix}_all" onchange="handleAllCheckboxChange('${prefix}')" class="rounded border-slate-300 text-blue-600" checked>
-                    <span>전체</span>
-                </label>`;
-
-            if(setVal.size === 0) {
-                el.innerHTML += `<span class="text-slate-400 text-xs px-2 py-1 block">데이터 없음</span>`;
-                return;
-            }
-
-            setVal.forEach(val => {
-                el.innerHTML += `
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1.5 rounded-lg">
-                        <input type="checkbox" name="${prefix}" value="${val}" onchange="handleItemCheckboxChange('${prefix}')" class="rounded border-slate-300 text-blue-600">
-                        <span class="text-slate-700">${val}</span>
-                    </label>`;
-            });
-        };
-
-        fillDropdownCheckboxes('deptDropdown', depts, 'fDeptChk');
-        fillDropdownCheckboxes('processDropdown', processes, 'fProcChk');
-        fillDropdownCheckboxes('rankDropdown', ranks, 'fRankChk');
-        fillDropdownCheckboxes('nationalityDropdown', nationalities, 'fNatChk');
-        updateFilterDropdownSummaries();
-    }
-
-    function handleAllCheckboxChange(prefix) {
-        const allCb = document.getElementById(`${prefix}_all`);
-        const items = document.querySelectorAll(`input[name="${prefix}"]`);
-
-        if (allCb.checked) {
-            items.forEach(cb => cb.checked = false);
-        } else {
-            const anyChecked = Array.from(items).some(cb => cb.checked);
-            if (!anyChecked) {
-                allCb.checked = true;
-            }
-        }
-        updateFilterDropdownSummaries();
-    }
-
-    function handleItemCheckboxChange(prefix) {
-        const allCb = document.getElementById(`${prefix}_all`);
-        const items = document.querySelectorAll(`input[name="${prefix}"]`);
-        const checkedItems = Array.from(items).filter(cb => cb.checked);
-
-        if (checkedItems.length > 0) {
-            allCb.checked = false;
-        } else {
-            allCb.checked = true;
-        }
-        updateFilterDropdownSummaries();
-    }
-
-    function updateFilterDropdownSummaries() {
-        const updateSummary = (prefix, summaryId) => {
-            const allCb = document.getElementById(`${prefix}_all`);
-            const checked = Array.from(document.querySelectorAll(`input[name="${prefix}"]:checked`));
-            const el = document.getElementById(summaryId);
-            if (!el) return;
-
-            if ((allCb && allCb.checked) || checked.length === 0) {
-                el.innerText = '전체';
-            } else if (checked.length === 1) {
-                el.innerText = checked[0].value;
-            } else {
-                el.innerText = `${checked[0].value} 외 ${checked.length - 1}건`;
-            }
-        };
-
-        updateSummary('fDeptChk', 'deptSummaryText');
-        updateSummary('fProcChk', 'processSummaryText');
-        updateSummary('fRankChk', 'rankSummaryText');
-        updateSummary('fNatChk', 'nationalitySummaryText');
-    }
-
-    // ==========================================
-    // ⚙️ 설정 모달 내 '정렬 설정' 탭 로직
-    // ==========================================
-    function switchSettingsTab(tab) {
-        const sortTab = document.getElementById('settingsTabSort');
-        const infoTab = document.getElementById('settingsTabInfo');
-        const sortBtn = document.getElementById('setTabSortBtn');
-        const infoBtn = document.getElementById('setTabInfoBtn');
-
-        if (tab === 'sort') {
-            sortTab.classList.remove('hidden');
-            infoTab.classList.add('hidden');
-            sortBtn.className = "flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition";
-            infoBtn.className = "flex-1 py-2 rounded-xl text-slate-600 transition";
-            selectCustomOrderCategory(currentOrderCategory);
-        } else {
-            sortTab.classList.add('hidden');
-            infoTab.classList.remove('hidden');
-            infoBtn.className = "flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition";
-            sortBtn.className = "flex-1 py-2 rounded-xl text-slate-600 transition";
-        }
-    }
-
-    function selectCustomOrderCategory(category) {
-        currentOrderCategory = category;
-        ['dept', 'process', 'rank', 'nationality'].forEach(cat => {
-            const btn = document.getElementById(`orderCat-${cat}`);
-            if (!btn) return;
-            if (cat === category) {
-                btn.className = "px-3 py-1.5 rounded-lg bg-blue-600 text-white font-bold";
-            } else {
-                btn.className = "px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold";
-            }
-        });
-        syncCustomOrdersWithData();
-        draftOrderList = [...(customOrders[category] || [])];
-        renderCustomOrderDraftList();
-    }
-
-    function renderCustomOrderDraftList() {
-        const container = document.getElementById('customOrderListContainer');
-        if (!container) return;
-        container.innerHTML = '';
-
-        if (!draftOrderList || draftOrderList.length === 0) {
-            container.innerHTML = `<div class="text-center text-slate-400 py-6">불러올 항목 데이터가 없습니다.</div>`;
-            return;
-        }
-
-        let dragSrcIdx = null;
-
-        draftOrderList.forEach((item, idx) => {
-            const row = document.createElement('div');
-            row.className = 'sortable-item flex items-center justify-between bg-white px-3.5 py-2.5 rounded-xl border border-slate-200 cursor-grab';
-            row.draggable = true;
-
-            row.addEventListener('dragstart', () => {
-                dragSrcIdx = idx;
-                row.classList.add('dragging');
-            });
-            row.addEventListener('dragend', () => {
-                row.classList.remove('dragging');
-                container.querySelectorAll('.sortable-item').forEach(el => el.classList.remove('drag-over'));
-            });
-            row.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                row.classList.add('drag-over');
-            });
-            row.addEventListener('dragleave', () => {
-                row.classList.remove('drag-over');
-            });
-            row.addEventListener('drop', (e) => {
-                e.preventDefault();
-                row.classList.remove('drag-over');
-                if (dragSrcIdx !== null && dragSrcIdx !== idx) {
-                    const moved = draftOrderList.splice(dragSrcIdx, 1)[0];
-                    draftOrderList.splice(idx, 0, moved);
-                    dragSrcIdx = null;
-                    renderCustomOrderDraftList();
-                }
-            });
-
-            row.innerHTML = `
-                <div class="flex items-center gap-2.5">
-                    <span class="text-slate-400 select-none text-sm">⋮⋮</span>
-                    <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-extrabold text-[11px]">${idx + 1}</span>
-                    <span class="font-bold text-slate-800 text-xs">${item}</span>
-                </div>
-                <div class="flex items-center gap-1">
-                    <button type="button" onclick="moveDraftOrder(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold text-xs">▲</button>
-                    <button type="button" onclick="moveDraftOrder(${idx}, 1)" ${idx === draftOrderList.length - 1 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold text-xs">▼</button>
-                </div>
-            `;
-            container.appendChild(row);
-        });
-    }
-
-    function moveDraftOrder(index, delta) {
-        const target = index + delta;
-        if (target < 0 || target >= draftOrderList.length) return;
-        const temp = draftOrderList[index];
-        draftOrderList[index] = draftOrderList[target];
-        draftOrderList[target] = temp;
-        renderCustomOrderDraftList();
-    }
-
-    function resetCurrentCustomOrder() {
-        const rawList = extractUniqueValuesFromEmployees(currentOrderCategory).sort((a, b) => a.localeCompare(b, 'ko'));
-        draftOrderList = rawList;
-        renderCustomOrderDraftList();
-    }
-
-    function saveCustomOrderSettings() {
-        customOrders[currentOrderCategory] = [...draftOrderList];
-        saveCustomOrdersToStorage();
-        renderEmpTable();
-        showCustomAlert('정렬 순서가 저장되었습니다.');
-    }
-
-    function showLoading(text) {
-        document.getElementById('loadingText').innerText = text || "처리 중...";
-        document.getElementById('loadingModal').classList.add('show');
-    }
-
-    function hideLoading() {
-        document.getElementById('loadingModal').classList.remove('show');
-    }
-
-    function showCustomAlert(msg) {
-        document.getElementById('alertMessageText').innerText = msg;
-        document.getElementById('customAlertModal').classList.add('show');
-    }
-
-    function closeCustomAlert() {
-        document.getElementById('customAlertModal').classList.remove('show');
-    }
-
-    function openModal(modalId) {
-        document.getElementById(modalId).classList.add('show');
-        if(modalId === 'settingsModal') {
-            document.getElementById('settingsEmpCount').innerText = (dbData.employees || []).length;
-            switchSettingsTab('sort');
-        } else if(modalId === 'sortModal') {
-            for (let i = 0; i < SORT_LEVEL_COUNT; i++) {
-                const n = i + 1;
-                const defaultCrit = i === 0 ? 'name' : '';
-                document.getElementById(`sortCriteria${n}`).value = sortConfig[i]?.criteria ?? defaultCrit;
-                document.getElementById(`sortDir${n}`).value = sortConfig[i]?.direction || 'asc';
-            }
-        }
-    }
-
-    function closeModal(modalId) {
-        document.getElementById(modalId).classList.remove('show');
-    }
-
-    async function handleLogin() {
-        const id = document.getElementById('loginId').value.trim();
-        const pw = document.getElementById('loginPw').value.trim();
-        if(!id || !pw) return showCustomAlert('ID와 Password를 입력해주세요.');
-
-        showLoading("로그인 확인 중...");
-        try {
-            const res = await fetch(GAS_API_URL, { method: "POST", body: JSON.stringify({ action: "login", id, pw }) });
-            const result = await res.json();
-            hideLoading();
-            if(result.success) {
-                localStorage.setItem('cenit_logged_user', id);
-                document.getElementById('loginOverlay').classList.add('hidden');
-                document.getElementById('currentUserDisplay').innerText = `👤 접속자: ${id} 님`;
-                fetchAllData();
-            } else {
-                showCustomAlert('ID 또는 Password가 일치하지 않습니다.');
-            }
-        } catch(e) {
-            hideLoading();
-            showCustomAlert('통신 오류가 발생했습니다.');
-        }
-    }
-
-    function handleLogout() {
-        localStorage.removeItem('cenit_logged_user');
-        document.getElementById('loginId').value = "";
-        document.getElementById('loginPw').value = "";
-        document.getElementById('loginOverlay').classList.remove('hidden');
-    }
-
-    async function fetchAllData() {
-        showLoading("데이터 동기화 중...");
-        try {
-            const res = await fetch(GAS_API_URL);
-            dbData = await res.json();
-            hideLoading();
-            syncCustomOrdersWithData();
-            populateFilterCheckboxes();
-            renderAllTables();
-        } catch(e) {
-            hideLoading();
-            console.error(e);
-        }
-    }
-
-    function refreshMasterData() {
-        fetchAllData();
-        closeModal('settingsModal');
-        showCustomAlert('마스터 데이터가 성공적으로 갱신되었습니다.');
-    }
-
-    function switchTab(tabId) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-        document.getElementById('tab-' + tabId).classList.add('active');
-        document.getElementById('btn-' + tabId).classList.add('active');
-
-        const floatingBtn = document.getElementById('floatingAddBtn');
-        floatingBtn.style.display = (tabId === 'emp') ? 'flex' : 'none';
-    }
-
-    function renderAllTables() {
-        renderEmpTable();
-
-        const salBody = document.getElementById('salaryTableBody');
-        salBody.innerHTML = '';
-        if(!dbData.salary || dbData.salary.length === 0) {
-            salBody.innerHTML = `<tr><td colspan="10" class="p-12 text-slate-400 text-center font-medium">데이터가 없습니다.</td></tr>`;
-        } else {
-            dbData.salary.forEach(s => {
-                salBody.innerHTML += `
-                    <tr class="hover:bg-slate-50">
-                        <td class="p-4 font-bold">${s.사번 || ''}</td>
-                        <td class="p-4">${s.성명 || ''}</td>
-                        <td class="p-4">${s.귀속연월 || ''}</td>
-                        <td class="p-4">${s.급여형태 || ''}</td>
-                        <td class="p-4 font-bold text-blue-600">${s.기본급 ? Number(s.기본급).toLocaleString() + '원' : ''}</td>
-                        <td class="p-4">${s.연장근로수당 ? Number(s.연장근로수당).toLocaleString() + '원' : ''}</td>
-                        <td class="p-4">${s.야간근로수당 ? Number(s.야간근로수당).toLocaleString() + '원' : ''}</td>
-                        <td class="p-4">${s.휴일근로수당 ? Number(s.휴일근로수당).toLocaleString() + '원' : ''}</td>
-                        <td class="p-4">${s.직책수당 ? Number(s.직책수당).toLocaleString() + '원' : ''}</td>
-                        <td class="p-4 font-black text-emerald-600">${s.지급총액 ? Number(s.지급총액).toLocaleString() + '원' : ''}</td>
-                    </tr>`;
-            });
-        }
-
-        const vacBody = document.getElementById('vacationTableBody');
-        vacBody.innerHTML = '';
-        if(!dbData.vacation || dbData.vacation.length === 0) {
-            vacBody.innerHTML = `<tr><td colspan="8" class="p-12 text-slate-400 text-center font-medium">데이터가 없습니다.</td></tr>`;
-        } else {
-            dbData.vacation.forEach(v => {
-                vacBody.innerHTML += `
-                    <tr class="hover:bg-slate-50">
-                        <td class="p-4 font-bold">${v.사번 || ''}</td>
-                        <td class="p-4">${v.성명 || ''}</td>
-                        <td class="p-4">${v.귀속연도 || ''}</td>
-                        <td class="p-4"><span class="bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md text-xs font-bold">${v.휴가구분 || ''}</span></td>
-                        <td class="p-4 font-bold">${v.사용시간 ? v.사용시간 + '일' : ''}</td>
-                        <td class="p-4 text-xs">${v.휴가시작일 ? String(v.휴가시작일).split('T')[0] : ''}</td>
-                        <td class="p-4 text-xs">${v.휴가종료일 ? String(v.휴가종료일).split('T')[0] : ''}</td>
-                        <td class="p-4 text-left text-xs">${v.휴가사유 || ''}</td>
-                    </tr>`;
-            });
-        }
-
-        const disBody = document.getElementById('disciplineTableBody');
-        disBody.innerHTML = '';
-        if(!dbData.discipline || dbData.discipline.length === 0) {
-            disBody.innerHTML = `<tr><td colspan="7" class="p-12 text-slate-400 text-center font-medium">데이터가 없습니다.</td></tr>`;
-        } else {
-            dbData.discipline.forEach(d => {
-                disBody.innerHTML += `
-                    <tr class="hover:bg-slate-50">
-                        <td class="p-4 font-bold">${d.사번 || ''}</td>
-                        <td class="p-4">${d.성명 || ''}</td>
-                        <td class="p-4"><span class="px-2 py-1 rounded-md text-xs font-bold ${d.구분 === '포상' ? 'bg-blue-50 text-blue-600' : (d.구분 === '징계' ? 'bg-rose-50 text-rose-600' : '')}">${d.구분 || ''}</span></td>
-                        <td class="p-4">${d.종류 || ''}</td>
-                        <td class="p-4 text-xs">${d.처분일자 ? String(d.처분일자).split('T')[0] : ''}</td>
-                        <td class="p-4 text-left text-xs">${d.사유 || ''}</td>
-                        <td class="p-4 text-left text-xs">${d.조치내용 || ''}</td>
-                    </tr>`;
-            });
-        }
-    }
-
-    function parseRrnInfo(regNo) {
-        if (!regNo || regNo.length < 8) return { age: '-', gender: '-' };
-        const clean = String(regNo).replace(/[^0-9]/g, '');
-        if (clean.length < 7) return { age: '-', gender: '-' };
-        
-        const yy = parseInt(clean.substring(0, 2), 10);
-        const mm = parseInt(clean.substring(2, 4), 10);
-        const dd = parseInt(clean.substring(4, 6), 10);
-        const gCode = parseInt(clean.substring(6, 7), 10);
-        
-        let year = 1900 + yy;
-        if (gCode === 3 || gCode === 4 || gCode === 7 || gCode === 8) year = 2000 + yy;
-        else if (gCode === 9 || gCode === 0) year = 1800 + yy;
-        
-        const gender = (gCode % 2 !== 0) ? '남' : '여';
-        
-        const today = new Date();
-        let age = today.getFullYear() - year;
-        const m = (today.getMonth() + 1) - mm;
-        if (m < 0 || (m === 0 && today.getDate() < dd)) {
-            age--;
-        }
-        return { age: age >= 0 ? age + '세' : '-', gender };
-    }
-
-    function applyFilter() {
-        const getSelectedFilterValues = (prefix) => {
-            const allCb = document.getElementById(`${prefix}_all`);
-            if (allCb && allCb.checked) return [];
-            return Array.from(document.querySelectorAll(`input[name="${prefix}"]:checked`)).map(cb => cb.value);
-        };
-
-        filterState.depts = getSelectedFilterValues('fDeptChk');
-        filterState.processes = getSelectedFilterValues('fProcChk');
-        filterState.ranks = getSelectedFilterValues('fRankChk');
-        filterState.nationalities = getSelectedFilterValues('fNatChk');
-        filterState.hireStart = getCustomDateValue('filterHireStart');
-        filterState.hireEnd = getCustomDateValue('filterHireEnd');
-        filterState.resignStart = getCustomDateValue('filterResignStart');
-        filterState.resignEnd = getCustomDateValue('filterResignEnd');
-        filterState.excludeResigned = document.getElementById('filterExcludeResigned').checked;
-
-        closeModal('filterModal');
-
-        const isDefault =
-            filterState.depts.length === 0 &&
-            filterState.processes.length === 0 &&
-            filterState.ranks.length === 0 &&
-            filterState.nationalities.length === 0 &&
-            !filterState.hireStart && !filterState.hireEnd &&
-            !filterState.resignStart && !filterState.resignEnd &&
-            filterState.excludeResigned === true;
-
-        document.getElementById('filterStatusBadge').innerText = isDefault ? "전체 데이터 표시 중" : "상세 필터 적용됨";
-        renderEmpTable();
-    }
-
-    function resetFilter() {
-        ['fDeptChk', 'fProcChk', 'fRankChk', 'fNatChk'].forEach(prefix => {
-            const allCb = document.getElementById(`${prefix}_all`);
-            if (allCb) allCb.checked = true;
-            document.querySelectorAll(`input[name="${prefix}"]`).forEach(cb => cb.checked = false);
-        });
-        document.getElementById('filterExcludeResigned').checked = true;
-        setCustomDateValue('filterHireStart', '');
-        setCustomDateValue('filterHireEnd', '');
-        setCustomDateValue('filterResignStart', '');
-        setCustomDateValue('filterResignEnd', '');
-        updateFilterDropdownSummaries();
-
-        filterState = { depts: [], processes: [], ranks: [], nationalities: [], hireStart: '', hireEnd: '', resignStart: '', resignEnd: '', excludeResigned: true };
-        closeModal('filterModal');
-        document.getElementById('filterStatusBadge').innerText = "전체 데이터 표시 중";
-        renderEmpTable();
-    }
-
-    function applySort() {
-        const nextConfig = [];
-        for (let i = 0; i < SORT_LEVEL_COUNT; i++) {
-            const n = i + 1;
-            const crit = document.getElementById(`sortCriteria${n}`).value || '';
-            const dir = document.getElementById(`sortDir${n}`).value || 'asc';
-            nextConfig.push({
-                criteria: i === 0 ? (crit || 'name') : crit,
-                direction: dir
-            });
-        }
-        sortConfig = nextConfig;
-        closeModal('sortModal');
-        renderEmpTable();
+        saveJsonStorage(STORAGE_KEYS.customOrders, customOrders);
     }
 
     function getCustomOrderRank(category, val) {
@@ -1222,94 +998,249 @@
     }
 
     function compareSingleField(a, b, fieldKey, direction = 'asc') {
-        const dirFactor = direction === 'desc' ? -1 : 1;
+        const dir = direction === 'desc' ? -1 : 1;
         let diff = 0;
 
         if (fieldKey === 'name') {
-            const nameA = a['성명(한글)'] || a['사내호칭'] || a['성명(영문)'] || '';
-            const nameB = b['성명(한글)'] || b['사내호칭'] || b['성명(영문)'] || '';
-            diff = String(nameA).localeCompare(String(nameB), 'ko');
-        } else if (fieldKey === 'dept') {
-            const rankA = getCustomOrderRank('dept', a.부서);
-            const rankB = getCustomOrderRank('dept', b.부서);
-            diff = rankA !== rankB ? (rankA - rankB) : String(a.부서 || '').localeCompare(String(b.부서 || ''), 'ko');
-        } else if (fieldKey === 'process') {
-            const rankA = getCustomOrderRank('process', a.공정);
-            const rankB = getCustomOrderRank('process', b.공정);
-            diff = rankA !== rankB ? (rankA - rankB) : String(a.공정 || '').localeCompare(String(b.공정 || ''), 'ko');
-        } else if (fieldKey === 'rank') {
-            const rankA = getCustomOrderRank('rank', a.직위);
-            const rankB = getCustomOrderRank('rank', b.직위);
-            diff = rankA !== rankB ? (rankA - rankB) : String(a.직위 || '').localeCompare(String(b.직위 || ''), 'ko');
+            diff = String(getEmployeeDisplayName(a)).localeCompare(String(getEmployeeDisplayName(b)), 'ko');
+        } else if (fieldKey === 'dept' || fieldKey === 'process' || fieldKey === 'rank') {
+            const propMap = { dept: '부서', process: '공정', rank: '직위' };
+            const prop = propMap[fieldKey];
+            const rA = getCustomOrderRank(fieldKey, a[prop]);
+            const rB = getCustomOrderRank(fieldKey, b[prop]);
+            diff = rA !== rB ? (rA - rB) : String(a[prop] || '').localeCompare(String(b[prop] || ''), 'ko');
         } else if (fieldKey === 'nationality') {
-            const natA = getNormalizedNationality(a);
-            const natB = getNormalizedNationality(b);
-            const rankA = getCustomOrderRank('nationality', natA);
-            const rankB = getCustomOrderRank('nationality', natB);
-            diff = rankA !== rankB ? (rankA - rankB) : natA.localeCompare(natB, 'ko');
-        } else if (fieldKey === 'hireDate') {
-            const dA = a.입사일 ? String(a.입사일).split('T')[0] : '';
-            const dB = b.입사일 ? String(b.입사일).split('T')[0] : '';
-            diff = dA.localeCompare(dB);
-        } else if (fieldKey === 'resignDate') {
-            const dA = a.퇴사일 ? String(a.퇴사일).split('T')[0] : '';
-            const dB = b.퇴사일 ? String(b.퇴사일).split('T')[0] : '';
+            const nA = getNormalizedNationality(a);
+            const nB = getNormalizedNationality(b);
+            const rA = getCustomOrderRank('nationality', nA);
+            const rB = getCustomOrderRank('nationality', nB);
+            diff = rA !== rB ? (rA - rB) : nA.localeCompare(nB, 'ko');
+        } else if (fieldKey === 'hireDate' || fieldKey === 'resignDate') {
+            const prop = fieldKey === 'hireDate' ? '입사일' : '퇴사일';
+            const dA = a[prop] ? String(a[prop]).split('T')[0] : '';
+            const dB = b[prop] ? String(b[prop]).split('T')[0] : '';
             diff = dA.localeCompare(dB);
         }
-
-        return diff * dirFactor;
+        return diff * dir;
     }
 
     function updateSortStatusBadge() {
-        const labelMap = {
-            name: '성명',
-            dept: '부서',
-            process: '공정',
-            rank: '직급',
-            hireDate: '입사일',
-            resignDate: '퇴사일',
-            nationality: '국적'
-        };
-        const activeParts = sortConfig
-            .map((item, idx) => item.criteria ? `${idx + 1}차 ${labelMap[item.criteria] || item.criteria}(${item.direction === 'desc' ? '▼' : '▲'})` : null)
+        const labelMap = { name: '성명', dept: '부서', process: '공정', rank: '직급', hireDate: '입사일', resignDate: '퇴사일', nationality: '국적' };
+        const parts = sortConfig
+            .map((r, i) => r.criteria ? `${i + 1}차 ${labelMap[r.criteria]}(${r.direction === 'desc' ? '▼' : '▲'})` : null)
             .filter(Boolean);
+        document.getElementById('sortStatusBadge').innerText = parts.length ? `[정렬: ${parts.join(' → ')}]` : '';
+    }
 
-        const badge = document.getElementById('sortStatusBadge');
-        if (badge) {
-            badge.innerText = activeParts.length > 0 ? `[정렬: ${activeParts.join(' → ')}]` : '';
+    // ==========================================
+    // ⚙️ 탭별 설정 (헤더 순서/추가/삭제 + 커스텀 정렬 + 엑셀)
+    // ==========================================
+    function openTabSettings(tabId) {
+        currentSettingsTab = tabId;
+        document.getElementById('settingsTargetTabLabel').innerText = TAB_LABELS[tabId] || tabId;
+        document.getElementById('settingsEmpCount').innerText = (dbData.employees || []).length;
+        switchSettingsSubTab('columns');
+        openModal('settingsModal');
+    }
+
+    function switchSettingsSubTab(subTab) {
+        const colBox = document.getElementById('settingsSubColumns');
+        const sortBox = document.getElementById('settingsSubSort');
+        const colBtn = document.getElementById('setTabColumnsBtn');
+        const sortBtn = document.getElementById('setTabSortBtn');
+
+        if (subTab === 'columns') {
+            colBox.classList.remove('hidden');
+            sortBox.classList.add('hidden');
+            colBtn.className = 'flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition';
+            sortBtn.className = 'flex-1 py-2 rounded-xl text-slate-600 transition';
+            draftColumnsList = [...(tabColumnsConfig[currentSettingsTab] || DEFAULT_TAB_COLUMNS[currentSettingsTab])];
+            renderColumnOrderDraftList();
+        } else {
+            colBox.classList.add('hidden');
+            sortBox.classList.remove('hidden');
+            sortBtn.className = 'flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition';
+            colBtn.className = 'flex-1 py-2 rounded-xl text-slate-600 transition';
+            selectCustomOrderCategory(currentOrderCategory);
         }
     }
 
-    function renderEmpTable() {
-        const empBody = document.getElementById('empTableBody');
-        empBody.innerHTML = '';
-        updateSortStatusBadge();
+    function attachDragAndReorder(container, listRef, onReorder) {
+        let dragSrc = null;
+        listRef.forEach((item, idx) => {
+            const row = document.createElement('div');
+            row.className = 'sortable-item flex items-center justify-between bg-white px-3.5 py-2 rounded-xl border border-slate-200 cursor-grab';
+            row.draggable = true;
 
-        if(!dbData.employees || dbData.employees.length === 0) {
-            empBody.innerHTML = `<tr><td colspan="12" class="p-12 text-slate-400 text-center font-medium">데이터가 없습니다.</td></tr>`;
+            row.addEventListener('dragstart', () => { dragSrc = idx; row.classList.add('dragging'); });
+            row.addEventListener('dragend', () => {
+                row.classList.remove('dragging');
+                container.querySelectorAll('.sortable-item').forEach(el => el.classList.remove('drag-over'));
+            });
+            row.addEventListener('dragover', (e) => { e.preventDefault(); row.classList.add('drag-over'); });
+            row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                row.classList.remove('drag-over');
+                if (dragSrc !== null && dragSrc !== idx) {
+                    const [moved] = listRef.splice(dragSrc, 1);
+                    listRef.splice(idx, 0, moved);
+                    dragSrc = null;
+                    onReorder();
+                }
+            });
+
+            const canDelete = !PROTECTED_COLUMNS.has(item) && container.id === 'columnOrderListContainer';
+            row.innerHTML = `
+                <div class="flex items-center gap-2.5">
+                    <span class="text-slate-400 select-none">⋮⋮</span>
+                    <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-extrabold text-[10px]">${idx + 1}</span>
+                    <span class="font-bold text-slate-800 text-xs">${item}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button type="button" onclick="reorderItem('${container.id}', ${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold">▲</button>
+                    <button type="button" onclick="reorderItem('${container.id}', ${idx}, 1)" ${idx === listRef.length - 1 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold">▼</button>
+                    ${canDelete ? `<button type="button" onclick="deleteColumnFromDraft(${idx})" class="px-2 py-1 rounded bg-rose-50 text-rose-600 hover:bg-rose-100 font-bold ml-1">삭제</button>` : ''}
+                </div>`;
+            container.appendChild(row);
+        });
+    }
+
+    function renderColumnOrderDraftList() {
+        const container = document.getElementById('columnOrderListContainer');
+        container.innerHTML = '';
+        attachDragAndReorder(container, draftColumnsList, renderColumnOrderDraftList);
+    }
+
+    function reorderItem(containerId, idx, delta) {
+        const targetList = containerId === 'columnOrderListContainer' ? draftColumnsList : draftOrderList;
+        const target = idx + delta;
+        if (target < 0 || target >= targetList.length) return;
+        [targetList[idx], targetList[target]] = [targetList[target], targetList[idx]];
+        if (containerId === 'columnOrderListContainer') renderColumnOrderDraftList();
+        else renderCustomOrderDraftList();
+    }
+
+    function deleteColumnFromDraft(idx) {
+        const colName = draftColumnsList[idx];
+        if (PROTECTED_COLUMNS.has(colName)) return showCustomAlert('필수 항목은 삭제할 수 없습니다.');
+        draftColumnsList.splice(idx, 1);
+        renderColumnOrderDraftList();
+    }
+
+    async function handleAddColumn() {
+        const input = document.getElementById('newColumnNameInput');
+        const colName = input.value.trim();
+        if (!colName) return showCustomAlert('추가할 항목명을 입력해주세요.');
+        if (draftColumnsList.includes(colName)) return showCustomAlert('이미 존재하는 항목명입니다.');
+
+        draftColumnsList.push(colName);
+        input.value = '';
+        renderColumnOrderDraftList();
+
+        showLoading('스프레드시트 헤더 반영 중...');
+        try {
+            const res = await callGasApi({
+                action: 'addColumn',
+                sheetName: SHEET_NAMES[currentSettingsTab],
+                columnName: colName
+            });
+            hideLoading();
+            if (!res.success) {
+                showCustomAlert('시트 헤더 추가 실패: ' + (res.error || '오류'));
+            }
+        } catch (e) {
+            hideLoading();
+            showCustomAlert('시트 동기화 오류: ' + e.message);
+        }
+    }
+
+    function resetCurrentTabColumns() {
+        draftColumnsList = [...DEFAULT_TAB_COLUMNS[currentSettingsTab]];
+        renderColumnOrderDraftList();
+    }
+
+    function saveCurrentTabColumns() {
+        tabColumnsConfig[currentSettingsTab] = [...draftColumnsList];
+        saveJsonStorage(STORAGE_KEYS.tabColumns, tabColumnsConfig);
+        renderAllTables();
+        showCustomAlert(`${TAB_LABELS[currentSettingsTab]} 헤더 순서가 저장되었습니다.`);
+    }
+
+    function selectCustomOrderCategory(category) {
+        currentOrderCategory = category;
+        ['dept', 'process', 'rank', 'nationality'].forEach(cat => {
+            const btn = document.getElementById(`orderCat-${cat}`);
+            btn.className = cat === category
+                ? 'px-3 py-1.5 rounded-lg bg-blue-600 text-white font-bold'
+                : 'px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold';
+        });
+        syncCustomOrdersWithData();
+        draftOrderList = [...(customOrders[category] || [])];
+        renderCustomOrderDraftList();
+    }
+
+    function renderCustomOrderDraftList() {
+        const container = document.getElementById('customOrderListContainer');
+        container.innerHTML = '';
+        if (!draftOrderList.length) {
+            container.innerHTML = `<div class="text-center text-slate-400 py-6">불러올 항목 데이터가 없습니다.</div>`;
             return;
         }
+        attachDragAndReorder(container, draftOrderList, renderCustomOrderDraftList);
+    }
 
-        let list = dbData.employees.filter(emp => {
-            if(filterState.excludeResigned && emp.재직상태 === '퇴사') return false;
+    function resetCurrentCustomOrder() {
+        draftOrderList = extractUniqueValuesFromEmployees(currentOrderCategory).sort((a, b) => a.localeCompare(b, 'ko'));
+        renderCustomOrderDraftList();
+    }
 
-            if(filterState.depts.length > 0 && !filterState.depts.includes(emp.부서)) return false;
-            if(filterState.processes.length > 0 && !filterState.processes.includes(emp.공정)) return false;
-            if(filterState.ranks.length > 0 && !filterState.ranks.includes(emp.직위)) return false;
-            if(filterState.nationalities.length > 0 && !filterState.nationalities.includes(getNormalizedNationality(emp))) return false;
+    function saveCustomOrderSettings() {
+        customOrders[currentOrderCategory] = [...draftOrderList];
+        saveJsonStorage(STORAGE_KEYS.customOrders, customOrders);
+        renderEmpTable();
+        showCustomAlert('정렬 순서가 저장되었습니다.');
+    }
 
-            const empHire = emp.입사일 ? String(emp.입사일).split('T')[0] : '';
-            const empResign = emp.퇴사일 ? String(emp.퇴사일).split('T')[0] : '';
+    // ==========================================
+    // 📥📤 엑셀 내보내기 / 불러오기 / 양식 다운로드
+    // ==========================================
+    function getExportableHeaders(tabId) {
+        const cols = tabColumnsConfig[tabId] || DEFAULT_TAB_COLUMNS[tabId];
+        return cols.filter(c => c !== '관리');
+    }
 
-            if(filterState.hireStart && (!empHire || empHire < filterState.hireStart)) return false;
-            if(filterState.hireEnd && (!empHire || empHire > filterState.hireEnd)) return false;
-            if(filterState.resignStart && (!empResign || empResign < filterState.resignStart)) return false;
-            if(filterState.resignEnd && (!empResign || empResign > filterState.resignEnd)) return false;
+    function resolveRowValueByHeader(tabId, rowObj, header) {
+        if (header === '성명(요약)') return getEmployeeDisplayName(rowObj);
+        if (header === '나이') return parseRrnInfo(rowObj['주민등록번호/외국인번호'] || rowObj['주민등록번호/외국인등록번호'] || '').age;
+        if (header === '성별') return parseRrnInfo(rowObj['주민등록번호/외국인번호'] || rowObj['주민등록번호/외국인등록번호'] || '').gender;
+        if (header === '주민등록번호/외국인번호') {
+            const raw = rowObj['주민등록번호/외국인번호'] || rowObj['주민등록번호/외국인등록번호'] || '';
+            return isMasked && raw.length >= 8 ? raw.substring(0, 8) + '******' : raw;
+        }
+        if (['입사일', '퇴사일', '휴가시작일', '휴가종료일', '처분일자'].includes(header)) {
+            return rowObj[header] ? String(rowObj[header]).split('T')[0] : '';
+        }
+        return rowObj[header] ?? '';
+    }
 
+    function getFilteredSortedEmployees() {
+        let list = (dbData.employees || []).filter(emp => {
+            if (filterState.excludeResigned && emp.재직상태 === '퇴사') return false;
+            if (filterState.depts.length && !filterState.depts.includes(emp.부서)) return false;
+            if (filterState.processes.length && !filterState.processes.includes(emp.공정)) return false;
+            if (filterState.ranks.length && !filterState.ranks.includes(emp.직위)) return false;
+            if (filterState.nationalities.length && !filterState.nationalities.includes(getNormalizedNationality(emp))) return false;
+
+            const hire = emp.입사일 ? String(emp.입사일).split('T')[0] : '';
+            const resign = emp.퇴사일 ? String(emp.퇴사일).split('T')[0] : '';
+            if (filterState.hireStart && (!hire || hire < filterState.hireStart)) return false;
+            if (filterState.hireEnd && (!hire || hire > filterState.hireEnd)) return false;
+            if (filterState.resignStart && (!resign || resign < filterState.resignStart)) return false;
+            if (filterState.resignEnd && (!resign || resign > filterState.resignEnd)) return false;
             return true;
         });
 
-        // 1차 → 2차 → 3차 → 4차 → 5차 순차 비교
         list.sort((a, b) => {
             for (const rule of sortConfig) {
                 if (!rule.criteria) continue;
@@ -1318,138 +1249,406 @@
             }
             return 0;
         });
+        return list;
+    }
 
-        if(list.length === 0) {
-            empBody.innerHTML = `<tr><td colspan="12" class="p-12 text-slate-400 text-center font-medium">조건에 해당되는 데이터가 없습니다.</td></tr>`;
+    function exportCurrentTabToExcel() {
+        const headers = getExportableHeaders(currentSettingsTab);
+        const rows = currentSettingsTab === 'emp' ? getFilteredSortedEmployees() : (dbData[currentSettingsTab] || []);
+        const exportData = rows.map(r => {
+            const obj = {};
+            headers.forEach(h => { obj[h] = resolveRowValueByHeader(currentSettingsTab, r, h); });
+            return obj;
+        });
+
+        const ws = XLSX.utils.json_to_sheet(exportData, { header: headers });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, TAB_LABELS[currentSettingsTab]);
+        XLSX.writeFile(wb, `${TAB_LABELS[currentSettingsTab]}_내보내기.xlsx`);
+    }
+
+    function downloadExcelTemplate() {
+        const headers = getExportableHeaders(currentSettingsTab);
+        const sampleRow = {};
+        headers.forEach(h => {
+            if (h === '사번') sampleRow[h] = '10001';
+            else if (h === '성명(요약)' || h === '성명') sampleRow[h] = '홍길동';
+            else if (h === '연락처') sampleRow[h] = '010-1234-5678';
+            else if (['입사일', '휴가시작일', '휴가종료일'].includes(h)) sampleRow[h] = '2026-01-01';
+            else sampleRow[h] = '';
+        });
+
+        const ws = XLSX.utils.json_to_sheet([sampleRow], { header: headers });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, '업로드양식');
+        XLSX.writeFile(wb, `${TAB_LABELS[currentSettingsTab]}_업로드양식.xlsx`);
+    }
+
+    function triggerExcelUpload() {
+        document.getElementById('excelUploadInput').click();
+    }
+
+    async function handleExcelFileSelected(event) {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        showLoading('엑셀 파일 분석 및 업로드 중...');
+        try {
+            const buffer = await file.arrayBuffer();
+            const wb = XLSX.read(buffer, { type: 'array' });
+            const firstSheet = wb.Sheets[wb.SheetNames[0]];
+            const parsedRows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+
+            if (!parsedRows.length) {
+                hideLoading();
+                return showCustomAlert('업로드할 데이터가 없습니다.');
+            }
+
+            const result = await callGasApi({
+                action: 'importRows',
+                sheetName: SHEET_NAMES[currentSettingsTab],
+                rows: parsedRows
+            });
+
+            hideLoading();
+            if (result.success) {
+                showCustomAlert(`${parsedRows.length}건 데이터가 반영되었습니다.`);
+                fetchAllData();
+            } else {
+                showCustomAlert('업로드 실패: ' + (result.error || '오류'));
+            }
+        } catch (err) {
+            hideLoading();
+            showCustomAlert('엑셀 처리 오류: ' + err.message);
+        }
+    }
+
+    // ==========================================
+    // 🏖️ 휴가관리 & 근로기준법 기반 연차 계산
+    // ==========================================
+    function openVacationForm() {
+        const select = document.getElementById('vEmpSelect');
+        select.innerHTML = '';
+        (dbData.employees || []).forEach(emp => {
+            const opt = document.createElement('option');
+            opt.value = emp.사번;
+            opt.textContent = `${getEmployeeDisplayName(emp)} (${emp.사번})`;
+            select.appendChild(opt);
+        });
+        document.getElementById('vYear').value = String(new Date().getFullYear());
+        document.getElementById('vType').value = '연차';
+        document.getElementById('vDays').value = '1';
+        setCustomDateValue('vStart', new Date().toISOString().split('T')[0]);
+        setCustomDateValue('vEnd', new Date().toISOString().split('T')[0]);
+        document.getElementById('vReason').value = '';
+        onVacationEmployeeSelect();
+        openModal('vacationModal');
+    }
+
+    function onVacationEmployeeSelect() {
+        document.getElementById('vEmpId').value = document.getElementById('vEmpSelect').value || '';
+    }
+
+    function onVacationTypeChange() {
+        const t = document.getElementById('vType').value;
+        const daysInput = document.getElementById('vDays');
+        if (t === '오전반차' || t === '오후반차') daysInput.value = '0.5';
+        else if (t === '연차') daysInput.value = '1';
+    }
+
+    async function saveVacationData() {
+        const payload = {
+            사번: document.getElementById('vEmpId').value.trim(),
+            성명: document.getElementById('vEmpSelect').selectedOptions[0]?.textContent.split(' (')[0] || '',
+            귀속연도: document.getElementById('vYear').value.trim(),
+            휴가구분: document.getElementById('vType').value,
+            사용일수: Number(document.getElementById('vDays').value || 0),
+            휴가시작일: getCustomDateValue('vStart'),
+            휴가종료일: getCustomDateValue('vEnd'),
+            휴가사유: document.getElementById('vReason').value.trim()
+        };
+
+        if (!payload.사번 || !payload.휴가시작일) {
+            return showCustomAlert('대상 직원과 휴가시작일을 입력해주세요.');
+        }
+
+        closeModal('vacationModal');
+        showLoading('휴가 내역 저장 중...');
+        try {
+            const res = await callGasApi({ action: 'saveVacation', data: payload });
+            hideLoading();
+            if (res.success) {
+                showCustomAlert('휴가 사용내역이 기록되었습니다.');
+                fetchAllData();
+            } else {
+                showCustomAlert('저장 실패: ' + (res.error || '오류'));
+            }
+        } catch (e) {
+            hideLoading();
+            showCustomAlert('통신 오류: ' + e.message);
+        }
+    }
+
+    function calculateEmployeeLeaveSummary(empId) {
+        const emp = (dbData.employees || []).find(e => String(e.사번) === String(empId)) || {};
+        const basis = (emp.연차기준 || '입사일').trim();
+        const hireStr = emp.입사일 ? String(emp.입사일).split('T')[0] : '';
+        const now = new Date();
+        const year = now.getFullYear();
+
+        let totalDays = 0;
+        let ruleNote = '';
+
+        if (!hireStr) {
+            totalDays = LEAVE_POLICY.BASE_ANNUAL_DAYS;
+            ruleNote = '입사일 정보가 없어 기본 15일 기준으로 산정되었습니다.';
+        } else {
+            const hireDate = new Date(hireStr + 'T00:00:00');
+            const elapsedMonths = Math.max(0, (now.getFullYear() - hireDate.getFullYear()) * 12 + (now.getMonth() - hireDate.getMonth()));
+            const completedYears = Math.floor(elapsedMonths / 12);
+
+            if (basis === '회계연도') {
+                if (hireDate.getFullYear() === year) {
+                    const remainMonthsInYear = Math.max(1, 12 - hireDate.getMonth());
+                    totalDays = Number(((LEAVE_POLICY.BASE_ANNUAL_DAYS * remainMonthsInYear) / 12).toFixed(1));
+                    ruleNote = `회계연도(1/1~12/31) 기준 · ${year}년 입사자 재직 비율(${remainMonthsInYear}/12개월) 산정`;
+                } else {
+                    const extra = completedYears > 1 ? Math.floor((completedYears - 1) / LEAVE_POLICY.BONUS_STEP_YEARS) : 0;
+                    totalDays = Math.min(LEAVE_POLICY.MAX_ANNUAL_DAYS, LEAVE_POLICY.BASE_ANNUAL_DAYS + extra);
+                    ruleNote = `회계연도(1/1~12/31) 기준 · 근속 ${completedYears}년차 (가산 +${extra}일)`;
+                }
+            } else {
+                if (completedYears < 1) {
+                    totalDays = Math.min(LEAVE_POLICY.MAX_UNDER_ONE_YEAR_MONTHLY, elapsedMonths);
+                    ruleNote = `입사일(${hireStr}) 기준 · 근속 1년 미만 월차(${elapsedMonths}개월 개근 환산, 최대 11일)`;
+                } else {
+                    const extra = Math.floor((completedYears - 1) / LEAVE_POLICY.BONUS_STEP_YEARS);
+                    totalDays = Math.min(LEAVE_POLICY.MAX_ANNUAL_DAYS, LEAVE_POLICY.BASE_ANNUAL_DAYS + extra);
+                    ruleNote = `입사일(${hireStr}) 기준 · 근속 ${completedYears}년차 (기본 15일 + 가산 ${extra}일)`;
+                }
+            }
+        }
+
+        const history = (dbData.vacation || []).filter(v => String(v.사번) === String(empId));
+        const usedDays = history.reduce((sum, v) => sum + Number(v.사용일수 ?? v.사용시간 ?? 0), 0);
+        const remainDays = Number((totalDays - usedDays).toFixed(1));
+
+        return { emp, basis, totalDays, usedDays, remainDays, ruleNote, history };
+    }
+
+    function openLeaveSummaryModal(empId) {
+        const info = calculateEmployeeLeaveSummary(empId);
+        const displayName = getEmployeeDisplayName(info.emp);
+
+        document.getElementById('leaveModalTitle').innerText = `${displayName} 연차 현황`;
+        document.getElementById('leaveBasisBadge').innerText = `${info.basis} 기준`;
+        document.getElementById('leaveModalSub').innerText = `사번 ${empId} · ${info.emp.부서 || '-'} / ${info.emp.공정 || '-'} / ${info.emp.직위 || '-'}`;
+        document.getElementById('leaveTotalDays').innerText = `${info.totalDays}일`;
+        document.getElementById('leaveUsedDays').innerText = `${info.usedDays}일`;
+        document.getElementById('leaveRemainDays').innerText = `${info.remainDays}일`;
+        document.getElementById('leaveRuleNote').innerText = `* ${info.ruleNote} (근로기준법 제60조 기본 로직 적용)`;
+
+        const tbody = document.getElementById('leaveHistoryBody');
+        if (!info.history.length) {
+            tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-slate-400">등록된 휴가 사용내역이 없습니다.</td></tr>`;
+        } else {
+            tbody.innerHTML = info.history.map(h => {
+                const start = h.휴가시작일 ? String(h.휴가시작일).split('T')[0] : '';
+                const end = h.휴가종료일 ? String(h.휴가종료일).split('T')[0] : '';
+                const days = h.사용일수 ?? h.사용시간 ?? '';
+                return `
+                    <tr>
+                        <td class="p-2.5 font-bold">${h.휴가구분 || ''}</td>
+                        <td class="p-2.5">${start}${end && end !== start ? ' ~ ' + end : ''}</td>
+                        <td class="p-2.5 font-bold text-blue-600">${days}일</td>
+                        <td class="p-2.5 text-left">${h.휴가사유 || ''}</td>
+                    </tr>`;
+            }).join('');
+        }
+
+        openModal('leaveSummaryModal');
+    }
+
+    // ==========================================
+    // 📋 테이블 렌더링
+    // ==========================================
+    function parseRrnInfo(regNo) {
+        if (!regNo || String(regNo).length < 7) return { age: '-', gender: '-' };
+        const clean = String(regNo).replace(/[^0-9]/g, '');
+        if (clean.length < 7) return { age: '-', gender: '-' };
+
+        const yy = parseInt(clean.substring(0, 2), 10);
+        const mm = parseInt(clean.substring(2, 4), 10);
+        const dd = parseInt(clean.substring(4, 6), 10);
+        const gCode = parseInt(clean.substring(6, 7), 10);
+
+        let year = 1900 + yy;
+        if (gCode === 3 || gCode === 4 || gCode === 7 || gCode === 8) year = 2000 + yy;
+        else if (gCode === 9 || gCode === 0) year = 1800 + yy;
+
+        const gender = (gCode % 2 !== 0) ? '남' : '여';
+        const today = new Date();
+        let age = today.getFullYear() - year;
+        const m = (today.getMonth() + 1) - mm;
+        if (m < 0 || (m === 0 && today.getDate() < dd)) age--;
+        return { age: age >= 0 ? age + '세' : '-', gender };
+    }
+
+    function renderTableHeader(headId, tabId) {
+        const thead = document.getElementById(headId);
+        const cols = tabColumnsConfig[tabId] || DEFAULT_TAB_COLUMNS[tabId];
+        thead.innerHTML = `<tr>${cols.map(c => `<th class="p-4">${c === '성명(요약)' ? '성명 (부서/공정/직급)' : c}</th>`).join('')}</tr>`;
+    }
+
+    function renderEmpTable() {
+        renderTableHeader('empTableHead', 'emp');
+        updateSortStatusBadge();
+
+        const cols = tabColumnsConfig.emp || DEFAULT_TAB_COLUMNS.emp;
+        const tbody = document.getElementById('empTableBody');
+        const list = getFilteredSortedEmployees();
+
+        if (!list.length) {
+            tbody.innerHTML = `<tr><td colspan="${cols.length}" class="p-12 text-slate-400 text-center font-medium">데이터가 없습니다.</td></tr>`;
             return;
         }
 
-        list.forEach((emp) => {
-            const name = emp['성명(한글)'] || emp['사내호칭'] || emp['성명(영문)'] || '-';
-            const dept = emp.부서 || '-';
-            const process = emp.공정 || '-';
-            const rank = emp.직위 || '-';
+        tbody.innerHTML = list.map(emp => {
+            const name = getEmployeeDisplayName(emp);
+            const info = parseRrnInfo(emp['주민등록번호/외국인번호'] || emp['주민등록번호/외국인등록번호'] || '');
 
-            let regNo = emp['주민등록번호/외국인번호'] || emp['주민등록번호/외국인등록번호'] || "";
-            const info = parseRrnInfo(regNo);
+            const cells = cols.map(col => {
+                if (col === '사번') return `<td class="p-4 font-bold text-slate-900">${emp.사번 || ''}</td>`;
+                if (col === '성명(요약)') {
+                    return `<td class="p-4 text-left pl-8">
+                        <button type="button" onclick="openLeaveSummaryModal('${emp.사번}')" class="font-black text-blue-600 hover:underline text-base mb-0.5 text-left">${name}</button>
+                        <div class="text-xs text-slate-400 font-semibold">${emp.부서 || '-'} / ${emp.공정 || '-'} / ${emp.직위 || '-'}</div>
+                    </td>`;
+                }
+                if (col === '연락처') return `<td class="p-4 text-xs font-medium text-slate-700">${emp.연락처 || ''}</td>`;
+                if (col === '주민등록번호/외국인번호') {
+                    return `<td class="p-4 font-mono">${resolveRowValueByHeader('emp', emp, col)}</td>`;
+                }
+                if (col === '나이') return `<td class="p-4 font-semibold text-slate-700">${info.age}</td>`;
+                if (col === '성별') return `<td class="p-4 font-semibold text-slate-700">${info.gender}</td>`;
+                if (col === '재직상태') {
+                    const badgeCls = emp.재직상태 === '재직' ? 'bg-emerald-50 text-emerald-600' : (emp.재직상태 ? 'bg-rose-50 text-rose-600' : '');
+                    return `<td class="p-4"><span class="px-2.5 py-1 rounded-md text-xs font-bold ${badgeCls}">${emp.재직상태 || ''}</span></td>`;
+                }
+                if (col === '메모') return `<td class="p-4 text-xs text-left max-w-xs truncate" title="${emp.메모 || ''}">${emp.메모 || ''}</td>`;
+                if (col === '관리') return `<td class="p-4"><button onclick="openFormByEmpId('${emp.사번}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold">수정</button></td>`;
+                return `<td class="p-4 text-xs">${resolveRowValueByHeader('emp', emp, col)}</td>`;
+            }).join('');
 
-            if(isMasked && regNo !== "" && regNo.length >= 8) {
-                regNo = regNo.substring(0, 8) + "******";
-            }
+            return `<tr class="hover:bg-slate-50">${cells}</tr>`;
+        }).join('');
+    }
 
-            empBody.innerHTML += `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-4 font-bold text-slate-900">${emp.사번 || ''}</td>
-                    <td class="p-4 text-left pl-8">
-                        <div class="font-black text-blue-600 text-base mb-0.5">${name}</div>
-                        <div class="text-xs text-slate-400 font-semibold">${dept} / ${process} / ${rank}</div>
-                    </td>
-                    <td class="p-4 font-mono">${regNo}</td>
-                    <td class="p-4 font-semibold text-slate-700">${info.age}</td>
-                    <td class="p-4 font-semibold text-slate-700">${info.gender}</td>
-                    <td class="p-4 text-xs text-slate-500">${emp.입사일 ? String(emp.입사일).split('T')[0] : ''}</td>
-                    <td class="p-4 text-xs text-slate-500">${emp.퇴사일 ? String(emp.퇴사일).split('T')[0] : ''}</td>
-                    <td class="p-4"><span class="px-2.5 py-1 rounded-md text-xs font-bold ${emp.재직상태 === '재직' ? 'bg-emerald-50 text-emerald-600' : (emp.재직상태 ? 'bg-rose-50 text-rose-600' : '')}">${emp.재직상태 || ''}</span></td>
-                    <td class="p-4 text-xs">${emp.급여형태 || ''}</td>
-                    <td class="p-4 text-xs">${emp.연차기준 || ''}</td>
-                    <td class="p-4 text-xs text-left max-w-xs truncate" title="${emp.메모 || ''}">${emp.메모 || ''}</td>
-                    <td class="p-4"><button onclick="openFormByEmpId('${emp.사번}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg text-xs font-bold">수정</button></td>
-                </tr>`;
-        });
+    function renderGenericDataTable(tabId, headId, bodyId, dataList) {
+        renderTableHeader(headId, tabId);
+        const cols = tabColumnsConfig[tabId] || DEFAULT_TAB_COLUMNS[tabId];
+        const tbody = document.getElementById(bodyId);
+
+        if (!dataList || !dataList.length) {
+            tbody.innerHTML = `<tr><td colspan="${cols.length}" class="p-12 text-slate-400 text-center font-medium">데이터가 없습니다.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = dataList.map(row => {
+            const cells = cols.map(col => {
+                if (tabId === 'vacation' && col === '성명' && row.사번) {
+                    return `<td class="p-4"><button type="button" onclick="openLeaveSummaryModal('${row.사번}')" class="font-bold text-blue-600 hover:underline">${row[col] || ''}</button></td>`;
+                }
+                const val = resolveRowValueByHeader(tabId, row, col);
+                if (['기본급', '연장근로수당', '야간근로수당', '휴일근로수당', '직책수당', '지급총액'].includes(col) && val !== '') {
+                    const num = Number(String(val).replace(/[^0-9.-]/g, ''));
+                    return `<td class="p-4 font-bold text-blue-600">${!isNaN(num) ? num.toLocaleString() + '원' : val}</td>`;
+                }
+                if (tabId === 'vacation' && col === '사용일수') {
+                    const dVal = row.사용일수 ?? row.사용시간 ?? '';
+                    return `<td class="p-4 font-bold">${dVal !== '' ? dVal + '일' : ''}</td>`;
+                }
+                return `<td class="p-4 text-xs">${val}</td>`;
+            }).join('');
+            return `<tr class="hover:bg-slate-50">${cells}</tr>`;
+        }).join('');
+    }
+
+    function renderAllTables() {
+        renderEmpTable();
+        renderGenericDataTable('salary', 'salaryTableHead', 'salaryTableBody', dbData.salary || []);
+        renderGenericDataTable('vacation', 'vacationTableHead', 'vacationTableBody', dbData.vacation || []);
+        renderGenericDataTable('discipline', 'disciplineTableHead', 'disciplineTableBody', dbData.discipline || []);
     }
 
     function toggleMask() {
         isMasked = !isMasked;
         const btn = document.getElementById('maskBtn');
-        if(isMasked) {
-            btn.className = "bg-rose-600 text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm";
-            btn.innerText = "🔒 보안 적용 (ON)";
-        } else {
-            btn.className = "bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm";
-            btn.innerText = "🔓 보안 해제 (OFF)";
-        }
+        btn.className = isMasked
+            ? 'bg-rose-600 text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm'
+            : 'bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm';
+        btn.innerText = isMasked ? '🔒 보안 적용 (ON)' : '🔓 보안 해제 (OFF)';
         renderAllTables();
     }
 
+    // ==========================================
+    // ✏️ 직원 등록 / 수정
+    // ==========================================
     function setFormNationality(type) {
         currentFormMode = type;
-        const btnInland = document.getElementById('toggleInland');
-        const btnForeigner = document.getElementById('toggleForeigner');
-        
-        const divInlandName = document.getElementById('divInlandName');
-        const divForeignerName = document.getElementById('divForeignerName');
-        const divForeignerNickname = document.getElementById('divForeignerNickname');
-        const divForeignerNationality = document.getElementById('divForeignerNationality');
-        const divForeignerVisa = document.getElementById('divForeignerVisa');
+        const isForeign = type === 'foreigner';
+        document.getElementById('toggleInland').className = isForeign ? 'flex-1 py-2.5 rounded-xl text-slate-600 transition' : 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white shadow-sm transition';
+        document.getElementById('toggleForeigner').className = isForeign ? 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white shadow-sm transition' : 'flex-1 py-2.5 rounded-xl text-slate-600 transition';
 
-        if(type === 'inland') {
-            btnInland.className = "flex-1 py-2.5 rounded-xl bg-blue-600 text-white shadow-sm transition";
-            btnForeigner.className = "flex-1 py-2.5 rounded-xl text-slate-600 transition";
-            divInlandName.classList.remove('hidden');
-            divForeignerName.classList.add('hidden');
-            divForeignerNickname.classList.add('hidden');
-            divForeignerNationality.classList.add('hidden');
-            divForeignerVisa.classList.add('hidden');
-        } else {
-            btnForeigner.className = "flex-1 py-2.5 rounded-xl bg-blue-600 text-white shadow-sm transition";
-            btnInland.className = "flex-1 py-2.5 rounded-xl text-slate-600 transition";
-            divInlandName.classList.add('hidden');
-            divForeignerName.classList.remove('hidden');
-            divForeignerNickname.classList.remove('hidden');
-            divForeignerNationality.classList.remove('hidden');
-            divForeignerVisa.classList.remove('hidden');
-        }
+        document.getElementById('divInlandName').classList.toggle('hidden', isForeign);
+        ['divForeignerName', 'divForeignerNickname', 'divForeignerNationality', 'divForeignerVisa'].forEach(id => {
+            document.getElementById(id).classList.toggle('hidden', !isForeign);
+        });
     }
 
     function openFormByEmpId(empId) {
-        const idx = dbData.employees.findIndex(e => String(e.사번) === String(empId));
+        const idx = (dbData.employees || []).findIndex(e => String(e.사번) === String(empId));
         openForm(idx);
     }
 
     function openForm(idx) {
         openModal('hrModal');
-        if(idx === -1) {
-            document.getElementById('formTitle').innerText = "신규 입사자 등록";
+        if (idx === -1) {
+            document.getElementById('formTitle').innerText = '신규 입사자 등록';
             setFormNationality('inland');
-            document.getElementById('fId').value = "";
-            document.getElementById('fName').value = "";
-            document.getElementById('fEnglishName').value = "";
-            document.getElementById('fNickname').value = "";
-            document.getElementById('fNationality').value = "";
-            document.getElementById('fVisa').value = "";
-            document.getElementById('fDept').value = "";
-            document.getElementById('fProcess').value = "";
-            document.getElementById('fRank').value = "";
-            document.getElementById('fRegNo').value = "";
+            ['fId', 'fName', 'fEnglishName', 'fNickname', 'fNationality', 'fVisa', 'fDept', 'fProcess', 'fRank', 'fPhone', 'fRegNo', 'fMemo'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
             setCustomDateValue('fDate', new Date().toISOString().split('T')[0]);
             setCustomDateValue('fResignDate', '');
-            document.getElementById('fStatus').value = "재직";
-            document.getElementById('fSalaryType').value = "시급제";
-            document.getElementById('fAnnualBasis').value = "입사일";
-            document.getElementById('fMemo').value = "";
+            document.getElementById('fStatus').value = '재직';
+            document.getElementById('fSalaryType').value = '시급제';
+            document.getElementById('fAnnualBasis').value = '입사일';
             document.getElementById('fId').disabled = false;
         } else {
             const e = dbData.employees[idx];
-            const isForeign = e['성명(영문)'] || e['사내호칭'] || (e['국적'] && e['국적'] !== '대한민국');
+            const isForeign = Boolean(e['성명(영문)'] || e['사내호칭'] || (e['국적'] && e['국적'] !== '대한민국'));
             setFormNationality(isForeign ? 'foreigner' : 'inland');
 
-            document.getElementById('formTitle').innerText = `${e['성명(한글)'] || e['사내호칭'] || e['성명(영문)']} 정보 수정`;
-            document.getElementById('fId').value = e.사번 || "";
-            document.getElementById('fName').value = e['성명(한글)'] || "";
-            document.getElementById('fEnglishName').value = e['성명(영문)'] || "";
-            document.getElementById('fNickname').value = e['사내호칭'] || "";
-            document.getElementById('fNationality').value = e['국적'] || "";
-            document.getElementById('fVisa').value = e['외국인 비자'] || "";
-            document.getElementById('fDept').value = e.부서 || "";
-            document.getElementById('fProcess').value = e.공정 || "";
-            document.getElementById('fRank').value = e.직위 || "";
-            document.getElementById('fRegNo').value = e['주민등록번호/외국인번호'] || e['주민등록번호/외국인등록번호'] || "";
+            document.getElementById('formTitle').innerText = `${getEmployeeDisplayName(e)} 정보 수정`;
+            document.getElementById('fId').value = e.사번 || '';
+            document.getElementById('fName').value = e['성명(한글)'] || '';
+            document.getElementById('fEnglishName').value = e['성명(영문)'] || '';
+            document.getElementById('fNickname').value = e['사내호칭'] || '';
+            document.getElementById('fNationality').value = e['국적'] || '';
+            document.getElementById('fVisa').value = e['외국인 비자'] || '';
+            document.getElementById('fDept').value = e.부서 || '';
+            document.getElementById('fProcess').value = e.공정 || '';
+            document.getElementById('fRank').value = e.직위 || '';
+            document.getElementById('fPhone').value = e.연락처 || '';
+            document.getElementById('fRegNo').value = e['주민등록번호/외국인번호'] || e['주민등록번호/외국인등록번호'] || '';
             setCustomDateValue('fDate', e.입사일);
             setCustomDateValue('fResignDate', e.퇴사일);
-            document.getElementById('fStatus').value = e.재직상태 || "재직";
-            document.getElementById('fSalaryType').value = e.급여형태 || "시급제";
-            document.getElementById('fAnnualBasis').value = e.연차기준 || "입사일";
-            document.getElementById('fMemo').value = e.메모 || "";
+            document.getElementById('fStatus').value = e.재직상태 || '재직';
+            document.getElementById('fSalaryType').value = e.급여형태 || '시급제';
+            document.getElementById('fAnnualBasis').value = e.연차기준 || '입사일';
+            document.getElementById('fMemo').value = e.메모 || '';
             document.getElementById('fId').disabled = true;
         }
     }
@@ -1458,47 +1657,43 @@
 
     async function saveEmployeeData() {
         const empData = {
-            사번: document.getElementById('fId').value,
-            부서: document.getElementById('fDept').value,
-            공정: document.getElementById('fProcess').value,
-            직위: document.getElementById('fRank').value,
-            "성명(한글)": currentFormMode === 'inland' ? document.getElementById('fName').value : "",
-            "성명(영문)": currentFormMode === 'foreigner' ? document.getElementById('fEnglishName').value : "",
-            "사내호칭": currentFormMode === 'foreigner' ? document.getElementById('fNickname').value : "",
-            "국적": currentFormMode === 'foreigner' ? document.getElementById('fNationality').value : "",
-            "외국인 비자": currentFormMode === 'foreigner' ? document.getElementById('fVisa').value : "",
-            "주민등록번호/외국인번호": document.getElementById('fRegNo').value,
+            사번: document.getElementById('fId').value.trim(),
+            부서: document.getElementById('fDept').value.trim(),
+            공정: document.getElementById('fProcess').value.trim(),
+            직위: document.getElementById('fRank').value.trim(),
+            연락처: document.getElementById('fPhone').value.trim(),
+            '성명(한글)': currentFormMode === 'inland' ? document.getElementById('fName').value.trim() : '',
+            '성명(영문)': currentFormMode === 'foreigner' ? document.getElementById('fEnglishName').value.trim() : '',
+            '사내호칭': currentFormMode === 'foreigner' ? document.getElementById('fNickname').value.trim() : '',
+            '국적': currentFormMode === 'foreigner' ? document.getElementById('fNationality').value.trim() : '',
+            '외국인 비자': currentFormMode === 'foreigner' ? document.getElementById('fVisa').value.trim() : '',
+            '주민등록번호/외국인번호': document.getElementById('fRegNo').value.trim(),
             입사일: getCustomDateValue('fDate'),
             퇴사일: getCustomDateValue('fResignDate'),
             재직상태: document.getElementById('fStatus').value,
-            급여형태: document.getElementById('fSalaryType').value,
+            급여형태: document.getElementById('fSalaryType').value.trim(),
             연차기준: document.getElementById('fAnnualBasis').value,
             메모: document.getElementById('fMemo').value
         };
 
-        if(!empData.사번 || (!empData["성명(한글)"] && !empData["성명(영문)"] && !empData["사내호칭"])) {
-            return showCustomAlert("사번과 성명(또는 사내호칭)은 필수 입력 항목입니다.");
+        if (!empData.사번 || (!empData['성명(한글)'] && !empData['성명(영문)'] && !empData['사내호칭'])) {
+            return showCustomAlert('사번과 성명(또는 사내호칭)은 필수 입력 항목입니다.');
         }
 
         closeForm();
-        showLoading("저장 중...");
-
+        showLoading('저장 중...');
         try {
-            const res = await fetch(GAS_API_URL, {
-                method: "POST",
-                body: JSON.stringify({ action: "saveEmployee", data: empData })
-            });
-            const result = await res.json();
+            const result = await callGasApi({ action: 'saveEmployee', data: empData });
             hideLoading();
-            if(result.success) {
+            if (result.success) {
                 showCustomAlert('성공적으로 저장되었습니다.');
                 fetchAllData();
             } else {
-                showCustomAlert('저장 실패: ' + result.error);
+                showCustomAlert('저장 실패: ' + (result.error || '오류'));
             }
-        } catch(e) {
+        } catch (e) {
             hideLoading();
-            showCustomAlert('통신 중 오류가 발생했습니다.');
+            showCustomAlert('통신 오류: ' + e.message);
         }
     }
 </script>
