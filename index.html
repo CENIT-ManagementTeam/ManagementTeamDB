@@ -9,7 +9,7 @@
         // ==========================================
         // 🛠️ [중요] 구글 앱스 스크립트 웹앱 URL 입력부
         // ==========================================
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbx_uav3DZhtIKaVV5q81Ykr7nN8XZjNeCXZ-iu7ZKFHSOUPn7g4S-BHJoMTxUzcWt9J/exec";
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwFZgmd3apId6svlk29P7c1zVD1dPJQFbvkzWCIaAREjq_vPiDRfJsCz6ylgK3qZW2M/exec";
     </script>
     <style>
         #loginOverlay { display: flex; }
@@ -146,11 +146,6 @@
                     <div id="date-filterResignEnd" class="flex-1"></div>
                 </div>
             </div>
-
-            <label class="flex items-center gap-2 cursor-pointer pt-2">
-                <input type="checkbox" id="filterExcludeResigned" class="rounded border-slate-300 text-blue-600" checked>
-                <span class="text-slate-700 font-bold">재직자만 보기 (퇴사자 제외)</span>
-            </label>
         </div>
         <div class="flex gap-2 mt-6">
             <button onclick="resetFilter()" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-xs hover:bg-slate-200 transition">초기화</button>
@@ -246,52 +241,82 @@
     </div>
 </div>
 
-<!-- 휴가 등록 모달 -->
+<!-- 휴가 사용내역 모달 -->
 <div id="vacationModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-        <h3 class="text-xl font-bold mb-4 text-slate-900">🏖️ 휴가 사용내역 기록</h3>
-        <div class="grid grid-cols-2 gap-3 text-xs font-semibold">
-            <div>
-                <label class="block text-slate-500 mb-1">직원 선택</label>
-                <select id="vEmpSelect" onchange="onVacationEmployeeSelect()" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs bg-white"></select>
+        <h3 class="text-xl font-bold mb-4 text-slate-900">휴가 사용내역</h3>
+        <div class="space-y-3 text-xs font-semibold">
+            <!-- 사원 검색창 -->
+            <div class="relative">
+                <label class="block text-slate-500 mb-1">사원 검색 (성명 또는 사번)</label>
+                <input type="text" id="vEmpSearchInput" oninput="filterVacationEmployeeCandidates()" onfocus="filterVacationEmployeeCandidates()" placeholder="이름이나 사번을 입력하세요..." class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-blue-500">
+                <div id="vEmpCandidateList" class="hidden absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-40 overflow-y-auto z-20 divide-y divide-slate-100"></div>
             </div>
+
+            <!-- 선택된 사원명 ('성명 (사번)') -->
             <div>
-                <label class="block text-slate-500 mb-1">사번</label>
-                <input type="text" id="vEmpId" readonly class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs bg-slate-50">
+                <label class="block text-slate-500 mb-1">사원명</label>
+                <input type="text" id="vSelectedEmpDisplay" readonly placeholder="검색 결과에서 사원을 선택하세요" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs bg-slate-50 font-bold text-slate-800">
             </div>
-            <div>
-                <label class="block text-slate-500 mb-1">귀속연도</label>
-                <input type="text" id="vYear" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs">
+
+            <!-- 휴가 시작일 / 휴가 종료일 -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-slate-500 mb-1">휴가 시작일</label>
+                    <div id="date-vStart"></div>
+                </div>
+                <div>
+                    <label class="block text-slate-500 mb-1">휴가 종료일</label>
+                    <div id="date-vEnd"></div>
+                </div>
             </div>
+
+            <!-- 자동 산정 귀속기간 안내 -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-[11px] text-slate-600 flex items-center justify-between">
+                <span>귀속기간 (자동):</span>
+                <span id="vCalculatedPeriodText" class="font-bold text-blue-700">-</span>
+            </div>
+
+            <!-- 휴가구분 -->
             <div>
                 <label class="block text-slate-500 mb-1">휴가구분</label>
-                <select id="vType" onchange="onVacationTypeChange()" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs bg-white">
-                    <option value="연차">연차 (1일)</option>
-                    <option value="오전반차">오전반차 (0.5일)</option>
-                    <option value="오후반차">오후반차 (0.5일)</option>
-                    <option value="기타">기타</option>
+                <select id="vType" onchange="onVacationTypeOrDateChange()" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs bg-white">
+                    <option value="연차">연차</option>
+                    <option value="반차">반차</option>
+                    <option value="월차">월차</option>
+                    <option value="기타 유급휴가">기타 유급휴가</option>
+                    <option value="기타 무급휴가">기타 무급휴가</option>
                 </select>
             </div>
-            <div>
-                <label class="block text-slate-500 mb-1">사용일수(일)</label>
-                <input type="number" step="0.5" id="vDays" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs">
+
+            <!-- 반차 시간 입력 (반차 선택 시 노출) -->
+            <div id="vHalfDayHoursBox" class="hidden bg-blue-50/60 border border-blue-100 rounded-xl p-3 space-y-1.5">
+                <label class="block text-blue-900 font-bold">반차 사용 시간 (일일 8시간 기준)</label>
+                <div class="flex items-center gap-2">
+                    <input type="number" step="0.5" min="0.5" max="8" id="vHalfHours" oninput="recalcVacationDays()" placeholder="예: 3" class="w-32 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white font-bold">
+                    <span class="text-[11px] text-slate-600">시간 (예: 3시간 → 3/8 = 0.375일)</span>
+                </div>
             </div>
+
+            <!-- 사용일수 (자동 산정) -->
             <div>
-                <label class="block text-slate-500 mb-1">휴가시작일</label>
-                <div id="date-vStart"></div>
+                <label class="block text-slate-500 mb-1">사용일수 (자동 산정)</label>
+                <input type="text" id="vDays" readonly class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs bg-slate-50 font-bold text-slate-800">
             </div>
+
+            <!-- 휴가사유 & 메모 -->
             <div>
-                <label class="block text-slate-500 mb-1">휴가종료일</label>
-                <div id="date-vEnd"></div>
-            </div>
-            <div class="col-span-2">
                 <label class="block text-slate-500 mb-1">휴가사유</label>
-                <input type="text" id="vReason" placeholder="개인사정, 병원진료 등" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-xs">
+                <input type="text" id="vReason" placeholder="개인사정, 병원진료 등" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs">
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1">메모</label>
+                <input type="text" id="vMemo" placeholder="참고 메모 (선택)" class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs">
             </div>
         </div>
         <div class="flex gap-2 mt-6">
             <button onclick="closeModal('vacationModal')" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-xs">취소</button>
-            <button onclick="saveVacationData()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-xs shadow-md">휴가 기록 저장</button>
+            <button onclick="saveVacationData()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-xs shadow-md">저장</button>
         </div>
     </div>
 </div>
@@ -305,7 +330,7 @@
         </div>
         <p id="leaveModalSub" class="text-xs text-slate-500 mb-4"></p>
 
-        <div class="grid grid-cols-3 gap-3 mb-4 text-center">
+        <div class="grid grid-cols-3 gap-3 mb-3 text-center">
             <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
                 <p class="text-[11px] text-slate-400 font-bold">총 발생 연차</p>
                 <p id="leaveTotalDays" class="text-lg font-black text-slate-800 mt-1">0일</p>
@@ -319,6 +344,9 @@
                 <p id="leaveRemainDays" class="text-lg font-black text-emerald-700 mt-1">0일</p>
             </div>
         </div>
+
+        <!-- 당월 월차 참고 안내 (현장직 대상) -->
+        <div id="leaveMonthlyInfoBox" class="hidden mb-3 px-3.5 py-2.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-xs font-bold text-indigo-900"></div>
 
         <p class="text-[11px] text-slate-400 mb-2" id="leaveRuleNote"></p>
 
@@ -371,9 +399,30 @@
     <div id="tab-emp" class="tab-content active space-y-4">
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
             <div class="flex items-center gap-2 flex-wrap">
+                <!-- 재직상태 다중 선택 드롭다운 -->
+                <div class="relative filter-dropdown-group">
+                    <button type="button" onclick="toggleFilterDropdown('empStatusDropdown')" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
+                        📌 재직상태 (<span id="empStatusSummaryText">재직</span>) ▾
+                    </button>
+                    <div id="empStatusDropdown" class="filter-dropdown-panel hidden absolute left-0 mt-1 w-44 border border-slate-200 rounded-xl p-2.5 space-y-1 bg-white shadow-lg z-30 text-xs font-semibold">
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1.5 rounded-lg">
+                            <input type="checkbox" name="empStatusChk" value="재직" onchange="onEmpStatusCheckboxChange()" class="rounded border-slate-300 text-blue-600" checked>
+                            <span>재직</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1.5 rounded-lg">
+                            <input type="checkbox" name="empStatusChk" value="휴직" onchange="onEmpStatusCheckboxChange()" class="rounded border-slate-300 text-blue-600">
+                            <span>휴직</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1.5 rounded-lg">
+                            <input type="checkbox" name="empStatusChk" value="퇴사" onchange="onEmpStatusCheckboxChange()" class="rounded border-slate-300 text-blue-600">
+                            <span>퇴사</span>
+                        </label>
+                    </div>
+                </div>
+
                 <button onclick="openModal('filterModal')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">🔍 필터 ▾</button>
                 <button onclick="openSortModal()" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">📊 정렬 ▾</button>
-                <span id="filterStatusBadge" class="text-xs text-slate-400 font-semibold ml-2">전체 데이터 표시 중</span>
+                <span id="filterStatusBadge" class="text-xs text-slate-400 font-semibold ml-2">재직자 표시 중</span>
                 <span id="sortStatusBadge" class="text-xs text-blue-600 font-semibold ml-1"></span>
             </div>
             <button onclick="openTabSettings('emp')" class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2.5 rounded-xl font-bold text-xs transition">⚙️ 설정</button>
@@ -401,10 +450,18 @@
 
     <!-- 3. 휴가관리 탭 -->
     <div id="tab-vacation" class="tab-content space-y-4">
+        <!-- 헤더 위 사번/이름 검색창 -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2 flex-1 max-w-md">
+                <input type="text" id="vacationSearchInput" oninput="renderVacationTable()" placeholder="사번 또는 성명 검색..." class="w-full border border-slate-200 rounded-xl px-4 py-2 text-xs font-semibold outline-none focus:border-blue-500">
+                <button type="button" onclick="clearVacationSearch()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold whitespace-nowrap">초기화</button>
+            </div>
+            <span class="text-xs text-slate-400 font-semibold">직원 이름을 클릭하면 연차 현황 및 당월 월차 여부를 확인할 수 있습니다.</span>
+        </div>
+
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
             <div class="flex items-center gap-2">
-                <button onclick="openVacationForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition">+ 휴가 사용내역 기록</button>
-                <span class="text-xs text-slate-400 font-semibold ml-2">직원 이름을 클릭하면 총/사용/잔여 연차를 확인할 수 있습니다.</span>
+                <button onclick="openVacationForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition">+ 휴가 사용내역</button>
             </div>
             <button onclick="openTabSettings('vacation')" class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2.5 rounded-xl font-bold text-xs transition">⚙️ 설정</button>
         </div>
@@ -456,7 +513,7 @@
             <div id="divForeignerVisa" class="hidden"><label class="block text-slate-500 mb-1">외국인 비자</label><input type="text" id="fVisa" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="예: E-7-1"></div>
 
             <div><label class="block text-slate-500 mb-1">부서</label><input type="text" id="fDept" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
-            <div><label class="block text-slate-500 mb-1">공정</label><input type="text" id="fProcess" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
+            <div><label class="block text-slate-500 mb-1">공정</label><input type="text" id="fProcess" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="예: 사무직, 600W SL"></div>
             <div><label class="block text-slate-500 mb-1">직위</label><input type="text" id="fRank" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div><label class="block text-slate-500 mb-1">연락처</label><input type="text" id="fPhone" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="010-0000-0000"></div>
             <div><label class="block text-slate-500 mb-1">주민등록/외국인번호</label><input type="text" id="fRegNo" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="000000-0000000"></div>
@@ -470,7 +527,14 @@
                 <div id="date-fResignDate"></div>
             </div>
 
-            <div><label class="block text-slate-500 mb-1">재직상태</label><select id="fStatus" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white"><option value="재직">재직</option><option value="퇴사">퇴사</option></select></div>
+            <div>
+                <label class="block text-slate-500 mb-1">재직상태</label>
+                <select id="fStatus" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white">
+                    <option value="재직">재직</option>
+                    <option value="휴직">휴직</option>
+                    <option value="퇴사">퇴사</option>
+                </select>
+            </div>
             <div><label class="block text-slate-500 mb-1">급여형태</label><input type="text" id="fSalaryType" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="시급제/연봉제"></div>
             <div><label class="block text-slate-500 mb-1">연차기준</label><select id="fAnnualBasis" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white"><option value="입사일">입사일</option><option value="회계연도">회계연도</option></select></div>
 
@@ -489,13 +553,15 @@
 
 <script>
     // ==========================================
-    // ⚙️ 연차 계산 정책 상수 (향후 회사 규정에 맞게 수정 가능)
+    // ⚙️ 연차/휴가 정책 상수
     // ==========================================
     const LEAVE_POLICY = {
         BASE_ANNUAL_DAYS: 15,
         MAX_ANNUAL_DAYS: 25,
         MAX_UNDER_ONE_YEAR_MONTHLY: 11,
-        BONUS_STEP_YEARS: 2
+        BONUS_STEP_YEARS: 2,
+        WORK_HOURS_PER_DAY: 8,
+        MONTHLY_LEAVE_MAX_DAYS: 1
     };
 
     const TAB_LABELS = {
@@ -505,7 +571,6 @@
         discipline: '징계/포상'
     };
 
-    // 표 맨 앞에 고정되는 항목 (순서 조절·ON/OFF 대상에서 제외)
     const FIXED_LEADING_COLUMNS = {
         emp: ['사번', '성명(요약)'],
         salary: ['사번', '성명'],
@@ -513,7 +578,6 @@
         discipline: ['사번', '성명']
     };
 
-    // 순서 조절 및 ON/OFF 대상 항목 (초기값)
     const DEFAULT_ADJUSTABLE_COLUMNS = {
         emp: [
             { name: '연락처', enabled: true },
@@ -539,12 +603,13 @@
             { name: '지급총액', enabled: true }
         ],
         vacation: [
-            { name: '귀속연도', enabled: true },
+            { name: '귀속기간', enabled: true },
             { name: '휴가구분', enabled: true },
             { name: '사용일수', enabled: true },
             { name: '휴가시작일', enabled: true },
             { name: '휴가종료일', enabled: true },
-            { name: '휴가사유', enabled: true }
+            { name: '휴가사유', enabled: true },
+            { name: '메모', enabled: true }
         ],
         discipline: [
             { name: '구분', enabled: true },
@@ -556,8 +621,8 @@
     };
 
     const STORAGE_KEYS = {
-        customOrders: 'cenit_custom_sort_orders_v4',
-        adjustableColumns: 'cenit_adjustable_columns_v4'
+        customOrders: 'cenit_custom_sort_orders_v5',
+        adjustableColumns: 'cenit_adjustable_columns_v5'
     };
 
     let dbData = { employees: [], salary: [], vacation: [], discipline: [] };
@@ -565,11 +630,12 @@
     let currentFormMode = 'inland';
     let currentActiveTab = 'emp';
     let currentSettingsTab = 'emp';
+    let selectedVacationEmpId = '';
 
+    let selectedEmpStatuses = ['재직'];
     let filterState = {
         depts: [], processes: [], ranks: [], nationalities: [],
-        hireStart: '', hireEnd: '', resignStart: '', resignEnd: '',
-        excludeResigned: true
+        hireStart: '', hireEnd: '', resignStart: '', resignEnd: ''
     };
 
     const SORT_LEVEL_COUNT = 5;
@@ -626,7 +692,6 @@
         return result;
     }
 
-    // 고정 항목 + 활성화된 조절 항목 합산
     function getVisibleTabColumns(tabId) {
         const fixed = FIXED_LEADING_COLUMNS[tabId] || [];
         const adj = (adjustableColumnsConfig[tabId] || DEFAULT_ADJUSTABLE_COLUMNS[tabId])
@@ -636,8 +701,47 @@
     }
 
     // ==========================================
-    // 📅 커스텀 날짜 입력기
+    // 📅 날짜 유틸리티 (로컬 기준 안전 처리)
     // ==========================================
+    function normalizeDateStr(val) {
+        if (!val) return '';
+        const str = String(val).trim();
+        const match = str.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+        if (match) {
+            return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
+        }
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+        return '';
+    }
+
+    function parseLocalDate(dateStr) {
+        const norm = normalizeDateStr(dateStr);
+        if (!norm) return null;
+        const [y, m, d] = norm.split('-').map(Number);
+        return new Date(y, m - 1, d);
+    }
+
+    function formatDotDate(dateObj) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}. ${m}. ${d}.`;
+    }
+
+    function diffCalendarDaysInclusive(startStr, endStr) {
+        const s = parseLocalDate(startStr);
+        const e = parseLocalDate(endStr);
+        if (!s || !e || e < s) return 0;
+        const msPerDay = 1000 * 60 * 60 * 24;
+        return Math.round((e.getTime() - s.getTime()) / msPerDay) + 1;
+    }
+
     function initCustomDateInput(containerId, fieldId) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -657,16 +761,25 @@
         const mEl = document.getElementById(`${fieldId}_m`);
         const dEl = document.getElementById(`${fieldId}_d`);
 
+        const onDateChanged = () => {
+            if (fieldId === 'vStart' || fieldId === 'vEnd') {
+                onVacationTypeOrDateChange();
+            }
+        };
+
         yEl.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9]/g, '');
             if (this.value.length === 4) { mEl.focus(); mEl.select(); }
+            onDateChanged();
         });
         mEl.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9]/g, '');
             if (this.value.length === 2) { dEl.focus(); dEl.select(); }
+            onDateChanged();
         });
         dEl.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9]/g, '');
+            onDateChanged();
         });
 
         [yEl, mEl, dEl].forEach(el => {
@@ -675,6 +788,7 @@
                     e.preventDefault();
                     yEl.value = ''; mEl.value = ''; dEl.value = '';
                     yEl.focus();
+                    onDateChanged();
                 }
             });
             el.addEventListener('click', function(e) { e.stopPropagation(); });
@@ -696,11 +810,12 @@
         const dEl = document.getElementById(`${fieldId}_d`);
         if (!yEl || !mEl || !dEl) return;
 
-        if (!dateStr) { yEl.value = ''; mEl.value = ''; dEl.value = ''; return; }
-        const parts = String(dateStr).split('T')[0].split('-');
-        yEl.value = parts[0] || '';
-        mEl.value = parts[1] || '';
-        dEl.value = parts[2] || '';
+        const norm = normalizeDateStr(dateStr);
+        if (!norm) { yEl.value = ''; mEl.value = ''; dEl.value = ''; return; }
+        const [y, m, d] = norm.split('-');
+        yEl.value = y || '';
+        mEl.value = m || '';
+        dEl.value = d || '';
     }
 
     function getCustomDateValue(fieldId) {
@@ -719,6 +834,7 @@
             initCustomDateInput(`date-${id}`, id);
         });
         renderSortModalInputs();
+        updateEmpStatusSummary();
         renderAllTables();
 
         const savedUser = localStorage.getItem('cenit_logged_user');
@@ -818,7 +934,7 @@
     }
 
     // ==========================================
-    // 🔽 필터 & '전체' 체크박스
+    // 🔽 재직상태 & 상세 필터
     // ==========================================
     function toggleFilterDropdown(dropdownId) {
         const target = document.getElementById(dropdownId);
@@ -831,7 +947,24 @@
         if (!e.target.closest('.filter-dropdown-group')) {
             document.querySelectorAll('.filter-dropdown-panel').forEach(p => p.classList.add('hidden'));
         }
+        if (!e.target.closest('#vEmpSearchInput') && !e.target.closest('#vEmpCandidateList')) {
+            document.getElementById('vEmpCandidateList')?.classList.add('hidden');
+        }
     });
+
+    function onEmpStatusCheckboxChange() {
+        selectedEmpStatuses = Array.from(document.querySelectorAll('input[name="empStatusChk"]:checked')).map(cb => cb.value);
+        updateEmpStatusSummary();
+        renderEmpTable();
+    }
+
+    function updateEmpStatusSummary() {
+        const el = document.getElementById('empStatusSummaryText');
+        if (!el) return;
+        if (!selectedEmpStatuses.length) el.innerText = '없음';
+        else if (selectedEmpStatuses.length === 3) el.innerText = '전체';
+        else el.innerText = selectedEmpStatuses.join(', ');
+    }
 
     function getNormalizedNationality(emp) {
         const raw = (emp.국적 || '').trim();
@@ -939,8 +1072,7 @@
             hireStart: getCustomDateValue('filterHireStart'),
             hireEnd: getCustomDateValue('filterHireEnd'),
             resignStart: getCustomDateValue('filterResignStart'),
-            resignEnd: getCustomDateValue('filterResignEnd'),
-            excludeResigned: document.getElementById('filterExcludeResigned').checked
+            resignEnd: getCustomDateValue('filterResignEnd')
         };
 
         closeModal('filterModal');
@@ -948,10 +1080,9 @@
             !filterState.depts.length && !filterState.processes.length &&
             !filterState.ranks.length && !filterState.nationalities.length &&
             !filterState.hireStart && !filterState.hireEnd &&
-            !filterState.resignStart && !filterState.resignEnd &&
-            filterState.excludeResigned;
+            !filterState.resignStart && !filterState.resignEnd;
 
-        document.getElementById('filterStatusBadge').innerText = isDefault ? '전체 데이터 표시 중' : '상세 필터 적용됨';
+        document.getElementById('filterStatusBadge').innerText = isDefault ? '기본 필터 적용 중' : '상세 필터 적용됨';
         renderEmpTable();
     }
 
@@ -961,13 +1092,12 @@
             if (allCb) allCb.checked = true;
             document.querySelectorAll(`input[name="${prefix}"]`).forEach(cb => cb.checked = false);
         });
-        document.getElementById('filterExcludeResigned').checked = true;
         ['filterHireStart', 'filterHireEnd', 'filterResignStart', 'filterResignEnd'].forEach(id => setCustomDateValue(id, ''));
         updateFilterDropdownSummaries();
 
-        filterState = { depts: [], processes: [], ranks: [], nationalities: [], hireStart: '', hireEnd: '', resignStart: '', resignEnd: '', excludeResigned: true };
+        filterState = { depts: [], processes: [], ranks: [], nationalities: [], hireStart: '', hireEnd: '', resignStart: '', resignEnd: '' };
         closeModal('filterModal');
-        document.getElementById('filterStatusBadge').innerText = '전체 데이터 표시 중';
+        document.getElementById('filterStatusBadge').innerText = '기본 필터 적용 중';
         renderEmpTable();
     }
 
@@ -1072,8 +1202,8 @@
             diff = rA !== rB ? (rA - rB) : nA.localeCompare(nB, 'ko');
         } else if (fieldKey === 'hireDate' || fieldKey === 'resignDate') {
             const prop = fieldKey === 'hireDate' ? '입사일' : '퇴사일';
-            const dA = a[prop] ? String(a[prop]).split('T')[0] : '';
-            const dB = b[prop] ? String(b[prop]).split('T')[0] : '';
+            const dA = normalizeDateStr(a[prop]);
+            const dB = normalizeDateStr(b[prop]);
             diff = dA.localeCompare(dB);
         }
         return diff * dir;
@@ -1292,21 +1422,23 @@
             return isMasked && raw.length >= 8 ? raw.substring(0, 8) + '******' : raw;
         }
         if (['입사일', '퇴사일', '휴가시작일', '휴가종료일', '처분일자'].includes(header)) {
-            return rowObj[header] ? String(rowObj[header]).split('T')[0] : '';
+            return normalizeDateStr(rowObj[header]);
         }
         return rowObj[header] ?? '';
     }
 
     function getFilteredSortedEmployees() {
         let list = (dbData.employees || []).filter(emp => {
-            if (filterState.excludeResigned && emp.재직상태 === '퇴사') return false;
+            const st = String(emp.재직상태 || '').trim();
+            if (!selectedEmpStatuses.includes(st)) return false;
+
             if (filterState.depts.length && !filterState.depts.includes(emp.부서)) return false;
             if (filterState.processes.length && !filterState.processes.includes(emp.공정)) return false;
             if (filterState.ranks.length && !filterState.ranks.includes(emp.직위)) return false;
             if (filterState.nationalities.length && !filterState.nationalities.includes(getNormalizedNationality(emp))) return false;
 
-            const hire = emp.입사일 ? String(emp.입사일).split('T')[0] : '';
-            const resign = emp.퇴사일 ? String(emp.퇴사일).split('T')[0] : '';
+            const hire = normalizeDateStr(emp.입사일);
+            const resign = normalizeDateStr(emp.퇴사일);
             if (filterState.hireStart && (!hire || hire < filterState.hireStart)) return false;
             if (filterState.hireEnd && (!hire || hire > filterState.hireEnd)) return false;
             if (filterState.resignStart && (!resign || resign < filterState.resignStart)) return false;
@@ -1327,7 +1459,10 @@
 
     function exportCurrentTabToExcel() {
         const headers = getExportableHeaders(currentSettingsTab);
-        const rows = currentSettingsTab === 'emp' ? getFilteredSortedEmployees() : (dbData[currentSettingsTab] || []);
+        const rows = currentSettingsTab === 'emp'
+            ? getFilteredSortedEmployees()
+            : (currentSettingsTab === 'vacation' ? getFilteredVacationList() : (dbData[currentSettingsTab] || []));
+
         const exportData = rows.map(r => {
             const obj = {};
             headers.forEach(h => { obj[h] = resolveRowValueByHeader(currentSettingsTab, r, h); });
@@ -1341,86 +1476,184 @@
     }
 
     // ==========================================
-    // 🏖️ 휴가관리 & 근로기준법 기반 연차 계산
+    // 🏖️ 휴가관리 & 귀속기간 / 연차 / 월차 검증
     // ==========================================
+    function findEmployeeById(empId) {
+        return (dbData.employees || []).find(e => String(e.사번 || '').trim() === String(empId || '').trim()) || null;
+    }
+
+    function isOfficeWorker(emp) {
+        return String(emp?.공정 || '').trim() === '사무직';
+    }
+
+    /**
+     * 휴가시작일 기준 귀속기간 산정
+     * - 회계연도 기준: YYYY. 01. 01. ~ YYYY. 12. 31.
+     * - 입사일 기준: 휴가시작일 시점 기준 해당 근속연도 기간 (YYYY. MM. DD. ~ YYYY. MM. DD.)
+     */
+    function computeAttributionPeriod(emp, startDateStr) {
+        const startObj = parseLocalDate(startDateStr);
+        if (!startObj) return null;
+
+        const basis = String(emp?.연차기준 || '입사일').trim();
+        const hireObj = parseLocalDate(emp?.입사일);
+
+        if (basis === '회계연도' || !hireObj) {
+            const y = startObj.getFullYear();
+            const pStart = new Date(y, 0, 1);
+            const pEnd = new Date(y, 11, 31);
+            return {
+                startDate: pStart,
+                endDate: pEnd,
+                startNorm: `${y}-01-01`,
+                endNorm: `${y}-12-31`,
+                label: `${formatDotDate(pStart)} ~ ${formatDotDate(pEnd)}`
+            };
+        }
+
+        const hireMonth = hireObj.getMonth();
+        const hireDay = hireObj.getDate();
+
+        let annStartYear = startObj.getFullYear();
+        let candidateStart = new Date(annStartYear, hireMonth, hireDay);
+        if (startObj < candidateStart) {
+            annStartYear -= 1;
+            candidateStart = new Date(annStartYear, hireMonth, hireDay);
+        }
+
+        const nextAnnStart = new Date(annStartYear + 1, hireMonth, hireDay);
+        const candidateEnd = new Date(nextAnnStart.getFullYear(), nextAnnStart.getMonth(), nextAnnStart.getDate() - 1);
+
+        const sNorm = `${candidateStart.getFullYear()}-${String(candidateStart.getMonth() + 1).padStart(2, '0')}-${String(candidateStart.getDate()).padStart(2, '0')}`;
+        const eNorm = `${candidateEnd.getFullYear()}-${String(candidateEnd.getMonth() + 1).padStart(2, '0')}-${String(candidateEnd.getDate()).padStart(2, '0')}`;
+
+        return {
+            startDate: candidateStart,
+            endDate: candidateEnd,
+            startNorm: sNorm,
+            endNorm: eNorm,
+            label: `${formatDotDate(candidateStart)} ~ ${formatDotDate(candidateEnd)}`
+        };
+    }
+
     function openVacationForm() {
-        const select = document.getElementById('vEmpSelect');
-        select.innerHTML = '';
-        (dbData.employees || []).forEach(emp => {
-            const opt = document.createElement('option');
-            opt.value = emp.사번;
-            opt.textContent = `${getEmployeeDisplayName(emp)} (${emp.사번})`;
-            select.appendChild(opt);
-        });
-        document.getElementById('vYear').value = String(new Date().getFullYear());
+        selectedVacationEmpId = '';
+        document.getElementById('vEmpSearchInput').value = '';
+        document.getElementById('vSelectedEmpDisplay').value = '';
+        document.getElementById('vEmpCandidateList').classList.add('hidden');
+
+        const todayStr = normalizeDateStr(new Date());
+        setCustomDateValue('vStart', todayStr);
+        setCustomDateValue('vEnd', todayStr);
         document.getElementById('vType').value = '연차';
-        document.getElementById('vDays').value = '1';
-        setCustomDateValue('vStart', new Date().toISOString().split('T')[0]);
-        setCustomDateValue('vEnd', new Date().toISOString().split('T')[0]);
+        document.getElementById('vHalfHours').value = '';
         document.getElementById('vReason').value = '';
-        onVacationEmployeeSelect();
+        document.getElementById('vMemo').value = '';
+
+        onVacationTypeOrDateChange();
         openModal('vacationModal');
     }
 
-    function onVacationEmployeeSelect() {
-        document.getElementById('vEmpId').value = document.getElementById('vEmpSelect').value || '';
+    function filterVacationEmployeeCandidates() {
+        const q = String(document.getElementById('vEmpSearchInput').value || '').trim().toLowerCase();
+        const listEl = document.getElementById('vEmpCandidateList');
+        const matches = (dbData.employees || []).filter(emp => {
+            const id = String(emp.사번 || '').toLowerCase();
+            const name = String(getEmployeeDisplayName(emp) || '').toLowerCase();
+            const kor = String(emp['성명(한글)'] || '').toLowerCase();
+            const nick = String(emp['사내호칭'] || '').toLowerCase();
+            if (!q) return true;
+            return id.includes(q) || name.includes(q) || kor.includes(q) || nick.includes(q);
+        }).slice(0, 20);
+
+        if (!matches.length) {
+            listEl.innerHTML = `<div class="px-3.5 py-2.5 text-slate-400 text-xs">일치하는 사원이 없습니다.</div>`;
+            listEl.classList.remove('hidden');
+            return;
+        }
+
+        listEl.innerHTML = matches.map(emp => {
+            const dispName = getEmployeeDisplayName(emp);
+            const empId = String(emp.사번 || '');
+            return `
+                <button type="button" onclick="selectVacationEmployee('${empId.replace(/'/g, "\\'")}')" class="w-full text-left px-3.5 py-2 hover:bg-blue-50 flex items-center justify-between text-xs">
+                    <span class="font-bold text-slate-800">${dispName} <span class="text-blue-600">(${empId})</span></span>
+                    <span class="text-[11px] text-slate-400">${emp.부서 || '-'} / ${emp.공정 || '-'}</span>
+                </button>`;
+        }).join('');
+        listEl.classList.remove('hidden');
     }
 
-    function onVacationTypeChange() {
-        const t = document.getElementById('vType').value;
+    function selectVacationEmployee(empId) {
+        const emp = findEmployeeById(empId);
+        if (!emp) return;
+        selectedVacationEmpId = String(emp.사번);
+        const dispName = getEmployeeDisplayName(emp);
+        document.getElementById('vSelectedEmpDisplay').value = `${dispName} (${selectedVacationEmpId})`;
+        document.getElementById('vEmpSearchInput').value = `${dispName} (${selectedVacationEmpId})`;
+        document.getElementById('vEmpCandidateList').classList.add('hidden');
+        onVacationTypeOrDateChange();
+    }
+
+    function onVacationTypeOrDateChange() {
+        const vType = document.getElementById('vType').value;
+        const halfBox = document.getElementById('vHalfDayHoursBox');
+        halfBox.classList.toggle('hidden', vType !== '반차');
+
+        const startStr = getCustomDateValue('vStart');
+        const emp = findEmployeeById(selectedVacationEmpId);
+        const periodEl = document.getElementById('vCalculatedPeriodText');
+
+        if (startStr) {
+            const period = computeAttributionPeriod(emp, startStr);
+            periodEl.innerText = period ? period.label : '-';
+        } else {
+            periodEl.innerText = '-';
+        }
+
+        recalcVacationDays();
+    }
+
+    function recalcVacationDays() {
+        const vType = document.getElementById('vType').value;
         const daysInput = document.getElementById('vDays');
-        if (t === '오전반차' || t === '오후반차') daysInput.value = '0.5';
-        else if (t === '연차') daysInput.value = '1';
-    }
 
-    async function saveVacationData() {
-        const payload = {
-            사번: document.getElementById('vEmpId').value.trim(),
-            성명: document.getElementById('vEmpSelect').selectedOptions[0]?.textContent.split(' (')[0] || '',
-            귀속연도: document.getElementById('vYear').value.trim(),
-            휴가구분: document.getElementById('vType').value,
-            사용일수: Number(document.getElementById('vDays').value || 0),
-            휴가시작일: getCustomDateValue('vStart'),
-            휴가종료일: getCustomDateValue('vEnd'),
-            휴가사유: document.getElementById('vReason').value.trim()
-        };
-
-        if (!payload.사번 || !payload.휴가시작일) {
-            return showCustomAlert('대상 직원과 휴가시작일을 입력해주세요.');
-        }
-
-        closeModal('vacationModal');
-        showLoading('휴가 내역 저장 중...');
-        try {
-            const res = await callGasApi({ action: 'saveVacation', data: payload });
-            hideLoading();
-            if (res.success) {
-                showCustomAlert('휴가 사용내역이 기록되었습니다.');
-                fetchAllData();
-            } else {
-                showCustomAlert('저장 실패: ' + (res.error || '오류'));
+        if (vType === '반차') {
+            const hours = Number(document.getElementById('vHalfHours').value || 0);
+            if (!hours || hours <= 0) {
+                daysInput.value = '';
+                return;
             }
-        } catch (e) {
-            hideLoading();
-            showCustomAlert('통신 오류: ' + e.message);
+            const calc = Number((hours / LEAVE_POLICY.WORK_HOURS_PER_DAY).toFixed(3));
+            daysInput.value = String(calc);
+            return;
         }
+
+        const startStr = getCustomDateValue('vStart');
+        const endStr = getCustomDateValue('vEnd');
+        if (!startStr || !endStr) {
+            daysInput.value = '';
+            return;
+        }
+        const diff = diffCalendarDaysInclusive(startStr, endStr);
+        daysInput.value = diff > 0 ? String(diff) : '';
     }
 
     function calculateEmployeeLeaveSummary(empId) {
-        const emp = (dbData.employees || []).find(e => String(e.사번) === String(empId)) || {};
-        const basis = (emp.연차기준 || '입사일').trim();
-        const hireStr = emp.입사일 ? String(emp.입사일).split('T')[0] : '';
+        const emp = findEmployeeById(empId) || {};
+        const basis = String(emp.연차기준 || '입사일').trim();
+        const hireNorm = normalizeDateStr(emp.입사일);
         const now = new Date();
         const year = now.getFullYear();
 
         let totalDays = 0;
         let ruleNote = '';
 
-        if (!hireStr) {
+        if (!hireNorm) {
             totalDays = LEAVE_POLICY.BASE_ANNUAL_DAYS;
             ruleNote = '입사일 정보가 없어 기본 15일 기준으로 산정되었습니다.';
         } else {
-            const hireDate = new Date(hireStr + 'T00:00:00');
+            const hireDate = parseLocalDate(hireNorm);
             const elapsedMonths = Math.max(0, (now.getFullYear() - hireDate.getFullYear()) * 12 + (now.getMonth() - hireDate.getMonth()));
             const completedYears = Math.floor(elapsedMonths / 12);
 
@@ -1437,20 +1670,147 @@
             } else {
                 if (completedYears < 1) {
                     totalDays = Math.min(LEAVE_POLICY.MAX_UNDER_ONE_YEAR_MONTHLY, elapsedMonths);
-                    ruleNote = `입사일(${hireStr}) 기준 · 근속 1년 미만 월차(${elapsedMonths}개월 개근 환산, 최대 11일)`;
+                    ruleNote = `입사일(${hireNorm}) 기준 · 근속 1년 미만 월차(${elapsedMonths}개월 개근 환산, 최대 11일)`;
                 } else {
                     const extra = Math.floor((completedYears - 1) / LEAVE_POLICY.BONUS_STEP_YEARS);
                     totalDays = Math.min(LEAVE_POLICY.MAX_ANNUAL_DAYS, LEAVE_POLICY.BASE_ANNUAL_DAYS + extra);
-                    ruleNote = `입사일(${hireStr}) 기준 · 근속 ${completedYears}년차 (기본 15일 + 가산 ${extra}일)`;
+                    ruleNote = `입사일(${hireNorm}) 기준 · 근속 ${completedYears}년차 (기본 15일 + 가산 ${extra}일)`;
                 }
             }
         }
 
-        const history = (dbData.vacation || []).filter(v => String(v.사번) === String(empId));
-        const usedDays = history.reduce((sum, v) => sum + Number(v.사용일수 ?? v.사용시간 ?? 0), 0);
-        const remainDays = Number((totalDays - usedDays).toFixed(1));
+        const history = (dbData.vacation || []).filter(v => String(v.사번 || '').trim() === String(empId || '').trim());
+        const annualUsedDays = history.reduce((sum, v) => {
+            const gubun = String(v.휴가구분 || '').trim();
+            if (gubun === '연차' || gubun === '반차') {
+                return sum + Number(v.사용일수 ?? v.사용시간 ?? 0);
+            }
+            return sum;
+        }, 0);
 
-        return { emp, basis, totalDays, usedDays, remainDays, ruleNote, history };
+        const remainDays = Number((totalDays - annualUsedDays).toFixed(3));
+
+        const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const monthlyUsedInCurrentMonth = history.reduce((sum, v) => {
+            const gubun = String(v.휴가구분 || '').trim();
+            const sDate = normalizeDateStr(v.휴가시작일);
+            if (gubun === '월차' && sDate.startsWith(currentYm)) {
+                return sum + Number(v.사용일수 ?? v.사용시간 ?? 0);
+            }
+            return sum;
+        }, 0);
+
+        const isOffice = isOfficeWorker(emp);
+        const monthlyStatusText = !isOffice
+            ? (monthlyUsedInCurrentMonth > 0
+                ? '당월 월차(1일) 사용됨'
+                : '당월 월차(1일) 미사용 - 개근 확인 필요')
+            : '';
+
+        return {
+            emp,
+            basis,
+            totalDays,
+            usedDays: Number(annualUsedDays.toFixed(3)),
+            remainDays,
+            ruleNote,
+            history,
+            isOffice,
+            monthlyStatusText,
+            monthlyUsedInCurrentMonth
+        };
+    }
+
+    async function saveVacationData() {
+        if (!selectedVacationEmpId) {
+            return showCustomAlert('사원을 먼저 검색해 선택해주세요.');
+        }
+        const emp = findEmployeeById(selectedVacationEmpId);
+        if (!emp) {
+            return showCustomAlert('선택한 사원 정보를 찾을 수 없습니다.');
+        }
+
+        const startStr = getCustomDateValue('vStart');
+        const endStr = getCustomDateValue('vEnd');
+        const vType = document.getElementById('vType').value;
+
+        if (!startStr || !endStr) {
+            return showCustomAlert('휴가 귀속기간 및 실제 사용기간을 확인하세요.');
+        }
+
+        const period = computeAttributionPeriod(emp, startStr);
+        if (!period || endStr < startStr || endStr > period.endNorm) {
+            return showCustomAlert('휴가 귀속기간 및 실제 사용기간을 확인하세요.');
+        }
+
+        let usedDays = 0;
+        if (vType === '반차') {
+            const hours = Number(document.getElementById('vHalfHours').value || 0);
+            if (!hours || hours <= 0 || hours > LEAVE_POLICY.WORK_HOURS_PER_DAY) {
+                return showCustomAlert('휴가 귀속기간 및 실제 사용기간을 확인하세요.');
+            }
+            usedDays = Number((hours / LEAVE_POLICY.WORK_HOURS_PER_DAY).toFixed(3));
+        } else {
+            usedDays = diffCalendarDaysInclusive(startStr, endStr);
+            if (usedDays <= 0) {
+                return showCustomAlert('휴가 귀속기간 및 실제 사용기간을 확인하세요.');
+            }
+        }
+
+        const summary = calculateEmployeeLeaveSummary(selectedVacationEmpId);
+
+        // 연차(연차+반차) 잔여일수 초과 확인
+        if ((vType === '연차' || vType === '반차') && usedDays > summary.remainDays) {
+            return showCustomAlert('잔여 연차 일수를 초과했습니다. 사용일수를 확인하세요.');
+        }
+
+        // 월차 대상(현장직) 및 당월 한도(1일) 확인
+        if (vType === '월차') {
+            if (isOfficeWorker(emp)) {
+                return showCustomAlert('당월 월차 사용 가능 일수(또는 대상 여부)를 확인하세요.');
+            }
+            const startYm = startStr.substring(0, 7);
+            const sameMonthMonthlyUsed = (dbData.vacation || []).reduce((sum, v) => {
+                if (String(v.사번 || '').trim() === selectedVacationEmpId
+                    && String(v.휴가구분 || '').trim() === '월차'
+                    && normalizeDateStr(v.휴가시작일).startsWith(startYm)) {
+                    return sum + Number(v.사용일수 ?? v.사용시간 ?? 0);
+                }
+                return sum;
+            }, 0);
+
+            if (sameMonthMonthlyUsed + usedDays > LEAVE_POLICY.MONTHLY_LEAVE_MAX_DAYS) {
+                return showCustomAlert('당월 월차 사용 가능 일수(또는 대상 여부)를 확인하세요.');
+            }
+        }
+
+        const payload = {
+            사번: selectedVacationEmpId,
+            성명: getEmployeeDisplayName(emp),
+            귀속기간: period.label,
+            휴가구분: vType,
+            사용일수: usedDays,
+            휴가시작일: startStr,
+            휴가종료일: endStr,
+            휴가사유: document.getElementById('vReason').value.trim(),
+            메모: document.getElementById('vMemo').value.trim()
+        };
+
+        closeModal('vacationModal');
+        showLoading('휴가 내역 저장 중...');
+        try {
+            const res = await callGasApi({ action: 'saveVacation', data: payload });
+            hideLoading();
+            if (res.success) {
+                showCustomAlert('휴가 사용내역이 저장되었습니다.');
+                fetchAllData();
+            } else {
+                showCustomAlert('저장 실패: ' + (res.error || '오류'));
+            }
+        } catch (e) {
+            hideLoading();
+            showCustomAlert('통신 오류: ' + e.message);
+        }
     }
 
     function openLeaveSummaryModal(empId) {
@@ -1463,15 +1823,24 @@
         document.getElementById('leaveTotalDays').innerText = `${info.totalDays}일`;
         document.getElementById('leaveUsedDays').innerText = `${info.usedDays}일`;
         document.getElementById('leaveRemainDays').innerText = `${info.remainDays}일`;
-        document.getElementById('leaveRuleNote').innerText = `* ${info.ruleNote} (근로기준법 제60조 기본 로직 적용)`;
+        document.getElementById('leaveRuleNote').innerText = `* ${info.ruleNote} (연차·반차 합산 기준)`;
+
+        const monthlyBox = document.getElementById('leaveMonthlyInfoBox');
+        if (!info.isOffice && info.monthlyStatusText) {
+            monthlyBox.innerText = `📌 월차 안내: ${info.monthlyStatusText}`;
+            monthlyBox.classList.remove('hidden');
+        } else {
+            monthlyBox.innerText = '';
+            monthlyBox.classList.add('hidden');
+        }
 
         const tbody = document.getElementById('leaveHistoryBody');
         if (!info.history.length) {
             tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-slate-400">등록된 휴가 사용내역이 없습니다.</td></tr>`;
         } else {
             tbody.innerHTML = info.history.map(h => {
-                const start = h.휴가시작일 ? String(h.휴가시작일).split('T')[0] : '';
-                const end = h.휴가종료일 ? String(h.휴가종료일).split('T')[0] : '';
+                const start = normalizeDateStr(h.휴가시작일);
+                const end = normalizeDateStr(h.휴가종료일);
                 const days = h.사용일수 ?? h.사용시간 ?? '';
                 return `
                     <tr>
@@ -1484,6 +1853,22 @@
         }
 
         openModal('leaveSummaryModal');
+    }
+
+    function clearVacationSearch() {
+        document.getElementById('vacationSearchInput').value = '';
+        renderVacationTable();
+    }
+
+    function getFilteredVacationList() {
+        const q = String(document.getElementById('vacationSearchInput')?.value || '').trim().toLowerCase();
+        const rows = dbData.vacation || [];
+        if (!q) return rows;
+        return rows.filter(r => {
+            const id = String(r.사번 || '').toLowerCase();
+            const name = String(r.성명 || '').toLowerCase();
+            return id.includes(q) || name.includes(q);
+        });
     }
 
     // ==========================================
@@ -1549,7 +1934,10 @@
                 if (col === '나이') return `<td class="p-4 font-semibold text-slate-700">${info.age}</td>`;
                 if (col === '성별') return `<td class="p-4 font-semibold text-slate-700">${info.gender}</td>`;
                 if (col === '재직상태') {
-                    const badgeCls = emp.재직상태 === '재직' ? 'bg-emerald-50 text-emerald-600' : (emp.재직상태 ? 'bg-rose-50 text-rose-600' : '');
+                    let badgeCls = '';
+                    if (emp.재직상태 === '재직') badgeCls = 'bg-emerald-50 text-emerald-600';
+                    else if (emp.재직상태 === '휴직') badgeCls = 'bg-amber-50 text-amber-700';
+                    else if (emp.재직상태 === '퇴사') badgeCls = 'bg-rose-50 text-rose-600';
                     return `<td class="p-4"><span class="px-2.5 py-1 rounded-md text-xs font-bold ${badgeCls}">${emp.재직상태 || ''}</span></td>`;
                 }
                 if (col === '메모') return `<td class="p-4 text-xs text-left max-w-xs truncate" title="${emp.메모 || ''}">${emp.메모 || ''}</td>`;
@@ -1591,10 +1979,14 @@
         }).join('');
     }
 
+    function renderVacationTable() {
+        renderGenericDataTable('vacation', 'vacationTableHead', 'vacationTableBody', getFilteredVacationList());
+    }
+
     function renderAllTables() {
         renderEmpTable();
         renderGenericDataTable('salary', 'salaryTableHead', 'salaryTableBody', dbData.salary || []);
-        renderGenericDataTable('vacation', 'vacationTableHead', 'vacationTableBody', dbData.vacation || []);
+        renderVacationTable();
         renderGenericDataTable('discipline', 'disciplineTableHead', 'disciplineTableBody', dbData.discipline || []);
     }
 
@@ -1636,7 +2028,7 @@
             ['fId', 'fName', 'fEnglishName', 'fNickname', 'fNationality', 'fVisa', 'fDept', 'fProcess', 'fRank', 'fPhone', 'fRegNo', 'fMemo'].forEach(id => {
                 document.getElementById(id).value = '';
             });
-            setCustomDateValue('fDate', new Date().toISOString().split('T')[0]);
+            setCustomDateValue('fDate', normalizeDateStr(new Date()));
             setCustomDateValue('fResignDate', '');
             document.getElementById('fStatus').value = '재직';
             document.getElementById('fSalaryType').value = '시급제';
