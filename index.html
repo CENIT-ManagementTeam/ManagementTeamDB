@@ -9,7 +9,7 @@
         // ==========================================
         // 🛠️ [중요] 구글 앱스 스크립트 웹앱 URL 입력부
         // ==========================================
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwFZgmd3apId6svlk29P7c1zVD1dPJQFbvkzWCIaAREjq_vPiDRfJsCz6ylgK3qZW2M/exec";
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycby77uN5509ut4mcXYr0-6kI-X1PHrp2dztYs8iVfoC8EedNO-00wevdhRflZmgkCXaZ/exec";
     </script>
     <style>
         #loginOverlay { display: flex; }
@@ -33,6 +33,11 @@
             border-color: #2563eb;
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
         }
+        .custom-date-box.locked {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+            cursor: not-allowed;
+        }
         .custom-date-box input {
             outline: none;
             text-align: center;
@@ -40,6 +45,10 @@
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
             font-size: 0.85rem;
             color: #1e293b;
+        }
+        .custom-date-box input:disabled {
+            color: #64748b;
+            cursor: not-allowed;
         }
         .custom-date-box input::placeholder {
             color: #94a3b8;
@@ -294,7 +303,7 @@
                 <label class="block text-blue-900 font-bold">반차 사용 시간 (일일 8시간 기준)</label>
                 <div class="flex items-center gap-2">
                     <input type="number" step="0.5" min="0.5" max="8" id="vHalfHours" oninput="recalcVacationDays()" placeholder="예: 3" class="w-32 border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white font-bold">
-                    <span class="text-[11px] text-slate-600">시간 (예: 3시간 → 3/8 = 0.375일)</span>
+                    <span class="text-[11px] text-slate-600">시간 (8시간 기준 자동 일수 환산)</span>
                 </div>
             </div>
 
@@ -422,7 +431,7 @@
 
                 <button onclick="openModal('filterModal')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">🔍 필터 ▾</button>
                 <button onclick="openSortModal()" class="bg-slate-100 text-slate-700 hover:bg-slate-200 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">📊 정렬 ▾</button>
-                <span id="filterStatusBadge" class="text-xs text-slate-400 font-semibold ml-2">재직자 표시 중</span>
+                <span id="filterStatusBadge" class="text-xs text-slate-400 font-semibold ml-2">기본 필터 적용 중</span>
                 <span id="sortStatusBadge" class="text-xs text-blue-600 font-semibold ml-1"></span>
             </div>
             <button onclick="openTabSettings('emp')" class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2.5 rounded-xl font-bold text-xs transition">⚙️ 설정</button>
@@ -456,7 +465,7 @@
                 <input type="text" id="vacationSearchInput" oninput="renderVacationTable()" placeholder="사번 또는 성명 검색..." class="w-full border border-slate-200 rounded-xl px-4 py-2 text-xs font-semibold outline-none focus:border-blue-500">
                 <button type="button" onclick="clearVacationSearch()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold whitespace-nowrap">초기화</button>
             </div>
-            <span class="text-xs text-slate-400 font-semibold">직원 이름을 클릭하면 연차 현황 및 당월 월차 여부를 확인할 수 있습니다.</span>
+            <span class="text-xs text-slate-400 font-semibold">직원 이름을 클릭하면 오늘 기준 연차 현황 및 당월 월차 여부를 확인할 수 있습니다.</span>
         </div>
 
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
@@ -621,8 +630,8 @@
     };
 
     const STORAGE_KEYS = {
-        customOrders: 'cenit_custom_sort_orders_v5',
-        adjustableColumns: 'cenit_adjustable_columns_v5'
+        customOrders: 'cenit_custom_sort_orders_v6',
+        adjustableColumns: 'cenit_adjustable_columns_v6'
     };
 
     let dbData = { employees: [], salary: [], vacation: [], discipline: [] };
@@ -666,7 +675,11 @@
     }
 
     function saveJsonStorage(key, value) {
-        localStorage.setItem(key, JSON.stringify(value));
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+            console.warn('로컬 저장소 쓰기 제한:', e);
+        }
     }
 
     function normalizeAdjustableConfig(rawConfig) {
@@ -701,10 +714,24 @@
     }
 
     // ==========================================
-    // 📅 날짜 유틸리티 (로컬 기준 안전 처리)
+    // 📅 날짜 및 윤년 유틸리티
     // ==========================================
+    function isLeapYear(year) {
+        return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    }
+
+    function getDaysInYear(year) {
+        return isLeapYear(year) ? 366 : 365;
+    }
+
     function normalizeDateStr(val) {
-        if (!val) return '';
+        if (val === null || val === undefined || val === '') return '';
+        if (val instanceof Date && !isNaN(val.getTime())) {
+            const y = val.getFullYear();
+            const m = String(val.getMonth() + 1).padStart(2, '0');
+            const d = String(val.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
         const str = String(val).trim();
         const match = str.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
         if (match) {
@@ -742,12 +769,22 @@
         return Math.round((e.getTime() - s.getTime()) / msPerDay) + 1;
     }
 
+    function getCompletedElapsedMonths(startDateObj, refDateObj) {
+        if (!startDateObj || !refDateObj || refDateObj < startDateObj) return 0;
+        let months = (refDateObj.getFullYear() - startDateObj.getFullYear()) * 12
+            + (refDateObj.getMonth() - startDateObj.getMonth());
+        if (refDateObj.getDate() < startDateObj.getDate()) {
+            months -= 1;
+        }
+        return Math.max(0, months);
+    }
+
     function initCustomDateInput(containerId, fieldId) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
         container.innerHTML = `
-            <div class="custom-date-box w-full justify-center" onclick="focusCustomDate('${fieldId}')">
+            <div id="box-${fieldId}" class="custom-date-box w-full justify-center" onclick="focusCustomDate('${fieldId}')">
                 <input type="text" id="${fieldId}_y" maxlength="4" placeholder="____" inputmode="numeric" class="w-11" />
                 <span class="text-slate-500 text-xs font-bold mr-1">년</span>
                 <input type="text" id="${fieldId}_m" maxlength="2" placeholder="__" inputmode="numeric" class="w-6" />
@@ -784,6 +821,7 @@
 
         [yEl, mEl, dEl].forEach(el => {
             el.addEventListener('keydown', function(e) {
+                if (el.disabled) return;
                 if (e.key === 'Backspace') {
                     e.preventDefault();
                     yEl.value = ''; mEl.value = ''; dEl.value = '';
@@ -795,8 +833,18 @@
         });
     }
 
+    function setCustomDateLocked(fieldId, locked) {
+        const box = document.getElementById(`box-${fieldId}`);
+        if (box) box.classList.toggle('locked', Boolean(locked));
+        ['y', 'm', 'd'].forEach(part => {
+            const el = document.getElementById(`${fieldId}_${part}`);
+            if (el) el.disabled = Boolean(locked);
+        });
+    }
+
     function focusCustomDate(fieldId) {
         const yEl = document.getElementById(`${fieldId}_y`);
+        if (!yEl || yEl.disabled) return;
         const mEl = document.getElementById(`${fieldId}_m`);
         const dEl = document.getElementById(`${fieldId}_d`);
         if (!yEl.value || yEl.value.length < 4) yEl.focus();
@@ -1476,7 +1524,7 @@
     }
 
     // ==========================================
-    // 🏖️ 휴가관리 & 귀속기간 / 연차 / 월차 검증
+    // 🏖️ 휴가관리 & 오늘 기준 연차 / 윤년 비례연차 / 월차 검증
     // ==========================================
     function findEmployeeById(empId) {
         return (dbData.employees || []).find(e => String(e.사번 || '').trim() === String(empId || '').trim()) || null;
@@ -1597,13 +1645,17 @@
 
     function onVacationTypeOrDateChange() {
         const vType = document.getElementById('vType').value;
-        const halfBox = document.getElementById('vHalfDayHoursBox');
-        halfBox.classList.toggle('hidden', vType !== '반차');
+        const isHalf = vType === '반차';
+        document.getElementById('vHalfDayHoursBox').classList.toggle('hidden', !isHalf);
 
         const startStr = getCustomDateValue('vStart');
+        if (isHalf && startStr) {
+            setCustomDateValue('vEnd', startStr);
+        }
+        setCustomDateLocked('vEnd', isHalf);
+
         const emp = findEmployeeById(selectedVacationEmpId);
         const periodEl = document.getElementById('vCalculatedPeriodText');
-
         if (startStr) {
             const period = computeAttributionPeriod(emp, startStr);
             periodEl.innerText = period ? period.label : '-';
@@ -1639,42 +1691,58 @@
         daysInput.value = diff > 0 ? String(diff) : '';
     }
 
+    /**
+     * '오늘' 날짜 기준 연차 산정 (윤년 반영 일할계산 포함)
+     */
     function calculateEmployeeLeaveSummary(empId) {
         const emp = findEmployeeById(empId) || {};
         const basis = String(emp.연차기준 || '입사일').trim();
         const hireNorm = normalizeDateStr(emp.입사일);
-        const now = new Date();
-        const year = now.getFullYear();
+        const today = new Date();
+        const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const year = todayMidnight.getFullYear();
 
         let totalDays = 0;
+        let maxCapDays = LEAVE_POLICY.BASE_ANNUAL_DAYS;
         let ruleNote = '';
 
         if (!hireNorm) {
             totalDays = LEAVE_POLICY.BASE_ANNUAL_DAYS;
-            ruleNote = '입사일 정보가 없어 기본 15일 기준으로 산정되었습니다.';
+            maxCapDays = LEAVE_POLICY.BASE_ANNUAL_DAYS;
+            ruleNote = `입사일 미등록 기준 / 최대 ${maxCapDays}일`;
         } else {
             const hireDate = parseLocalDate(hireNorm);
-            const elapsedMonths = Math.max(0, (now.getFullYear() - hireDate.getFullYear()) * 12 + (now.getMonth() - hireDate.getMonth()));
+            const elapsedMonths = getCompletedElapsedMonths(hireDate, todayMidnight);
             const completedYears = Math.floor(elapsedMonths / 12);
 
             if (basis === '회계연도') {
                 if (hireDate.getFullYear() === year) {
-                    const remainMonthsInYear = Math.max(1, 12 - hireDate.getMonth());
-                    totalDays = Number(((LEAVE_POLICY.BASE_ANNUAL_DAYS * remainMonthsInYear) / 12).toFixed(1));
-                    ruleNote = `회계연도(1/1~12/31) 기준 · ${year}년 입사자 재직 비율(${remainMonthsInYear}/12개월) 산정`;
+                    const yearEnd = new Date(year, 11, 31);
+                    const daysInYear = getDaysInYear(year);
+                    const activeDays = todayMidnight < hireDate ? 0 : diffCalendarDaysInclusive(hireNorm, `${year}-12-31`);
+                    const prorated = Number(((LEAVE_POLICY.BASE_ANNUAL_DAYS * activeDays) / daysInYear).toFixed(2));
+                    totalDays = prorated;
+                    maxCapDays = prorated;
+                    ruleNote = `회계연도(${year}, ${daysInYear}일 기준) 입사일(${hireNorm}) 일할계산 / 최대 ${maxCapDays}일`;
                 } else {
                     const extra = completedYears > 1 ? Math.floor((completedYears - 1) / LEAVE_POLICY.BONUS_STEP_YEARS) : 0;
-                    totalDays = Math.min(LEAVE_POLICY.MAX_ANNUAL_DAYS, LEAVE_POLICY.BASE_ANNUAL_DAYS + extra);
-                    ruleNote = `회계연도(1/1~12/31) 기준 · 근속 ${completedYears}년차 (가산 +${extra}일)`;
+                    const cap = Math.min(LEAVE_POLICY.MAX_ANNUAL_DAYS, LEAVE_POLICY.BASE_ANNUAL_DAYS + extra);
+                    totalDays = todayMidnight < hireDate ? 0 : cap;
+                    maxCapDays = cap;
+                    ruleNote = `회계연도(${year}) 기준 / 최대 ${maxCapDays}일`;
                 }
             } else {
                 if (completedYears < 1) {
-                    totalDays = Math.min(LEAVE_POLICY.MAX_UNDER_ONE_YEAR_MONTHLY, elapsedMonths);
-                    ruleNote = `입사일(${hireNorm}) 기준 · 근속 1년 미만 월차(${elapsedMonths}개월 개근 환산, 최대 11일)`;
+                    const accrued = Math.min(LEAVE_POLICY.MAX_UNDER_ONE_YEAR_MONTHLY, elapsedMonths);
+                    totalDays = accrued;
+                    maxCapDays = LEAVE_POLICY.MAX_UNDER_ONE_YEAR_MONTHLY;
+                    ruleNote = `입사일(${hireNorm}) 기준 / 최대 ${maxCapDays}일`;
                 } else {
                     const extra = Math.floor((completedYears - 1) / LEAVE_POLICY.BONUS_STEP_YEARS);
-                    totalDays = Math.min(LEAVE_POLICY.MAX_ANNUAL_DAYS, LEAVE_POLICY.BASE_ANNUAL_DAYS + extra);
-                    ruleNote = `입사일(${hireNorm}) 기준 · 근속 ${completedYears}년차 (기본 15일 + 가산 ${extra}일)`;
+                    const cap = Math.min(LEAVE_POLICY.MAX_ANNUAL_DAYS, LEAVE_POLICY.BASE_ANNUAL_DAYS + extra);
+                    totalDays = cap;
+                    maxCapDays = cap;
+                    ruleNote = `입사일(${hireNorm}) 기준 / 최대 ${maxCapDays}일`;
                 }
             }
         }
@@ -1690,7 +1758,7 @@
 
         const remainDays = Number((totalDays - annualUsedDays).toFixed(3));
 
-        const currentYm = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const currentYm = `${year}-${String(todayMidnight.getMonth() + 1).padStart(2, '0')}`;
         const monthlyUsedInCurrentMonth = history.reduce((sum, v) => {
             const gubun = String(v.휴가구분 || '').trim();
             const sDate = normalizeDateStr(v.휴가시작일);
@@ -1713,6 +1781,7 @@
             totalDays,
             usedDays: Number(annualUsedDays.toFixed(3)),
             remainDays,
+            maxCapDays,
             ruleNote,
             history,
             isOffice,
@@ -1731,10 +1800,14 @@
         }
 
         const startStr = getCustomDateValue('vStart');
-        const endStr = getCustomDateValue('vEnd');
         const vType = document.getElementById('vType').value;
+        const endStr = vType === '반차' ? startStr : getCustomDateValue('vEnd');
 
         if (!startStr || !endStr) {
+            return showCustomAlert('휴가 귀속기간 및 실제 사용기간을 확인하세요.');
+        }
+
+        if (vType === '반차' && startStr !== endStr) {
             return showCustomAlert('휴가 귀속기간 및 실제 사용기간을 확인하세요.');
         }
 
@@ -1759,12 +1832,10 @@
 
         const summary = calculateEmployeeLeaveSummary(selectedVacationEmpId);
 
-        // 연차(연차+반차) 잔여일수 초과 확인
         if ((vType === '연차' || vType === '반차') && usedDays > summary.remainDays) {
             return showCustomAlert('잔여 연차 일수를 초과했습니다. 사용일수를 확인하세요.');
         }
 
-        // 월차 대상(현장직) 및 당월 한도(1일) 확인
         if (vType === '월차') {
             if (isOfficeWorker(emp)) {
                 return showCustomAlert('당월 월차 사용 가능 일수(또는 대상 여부)를 확인하세요.');
@@ -1823,7 +1894,7 @@
         document.getElementById('leaveTotalDays').innerText = `${info.totalDays}일`;
         document.getElementById('leaveUsedDays').innerText = `${info.usedDays}일`;
         document.getElementById('leaveRemainDays').innerText = `${info.remainDays}일`;
-        document.getElementById('leaveRuleNote').innerText = `* ${info.ruleNote} (연차·반차 합산 기준)`;
+        document.getElementById('leaveRuleNote').innerText = `* ${info.ruleNote}`;
 
         const monthlyBox = document.getElementById('leaveMonthlyInfoBox');
         if (!info.isOffice && info.monthlyStatusText) {
