@@ -167,17 +167,17 @@
     </div>
 </div>
 
-<!-- 상세 정렬 팝업 모달 (1차·2차·3차 정렬 기준 + 각 오름/내림차순) -->
+<!-- 상세 정렬 팝업 모달 (1차 ~ 5차 정렬 기준 + 각 오름/내림차순) -->
 <div id="sortModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
-        <h3 class="text-xl font-bold mb-4 text-slate-900">📊 정렬 순서 설정</h3>
-        <div class="space-y-4 text-xs font-semibold">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <h3 class="text-xl font-bold mb-4 text-slate-900">📊 정렬 순서 설정 (1차 ~ 5차)</h3>
+        <div class="space-y-3 text-xs font-semibold">
 
             <!-- 1차 정렬 기준 -->
-            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
                 <label class="block text-slate-700 font-bold">1차 정렬 기준</label>
                 <div class="grid grid-cols-3 gap-2">
-                    <select id="sortCriteria1" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2.5 outline-none bg-white text-xs font-bold">
+                    <select id="sortCriteria1" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2 outline-none bg-white text-xs font-bold">
                         <option value="name">성명</option>
                         <option value="dept">부서</option>
                         <option value="process">공정</option>
@@ -186,7 +186,7 @@
                         <option value="resignDate">퇴사일</option>
                         <option value="nationality">국적</option>
                     </select>
-                    <select id="sortDir1" class="border border-slate-200 rounded-xl px-2 py-2.5 outline-none bg-white text-xs font-bold text-blue-700">
+                    <select id="sortDir1" class="border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white text-xs font-bold text-blue-700">
                         <option value="asc">오름차순 ▲</option>
                         <option value="desc">내림차순 ▼</option>
                     </select>
@@ -194,10 +194,10 @@
             </div>
 
             <!-- 2차 정렬 기준 -->
-            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
                 <label class="block text-slate-700 font-bold">2차 정렬 기준</label>
                 <div class="grid grid-cols-3 gap-2">
-                    <select id="sortCriteria2" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2.5 outline-none bg-white text-xs font-bold">
+                    <select id="sortCriteria2" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2 outline-none bg-white text-xs font-bold">
                         <option value="">없음</option>
                         <option value="name">성명</option>
                         <option value="dept">부서</option>
@@ -207,7 +207,7 @@
                         <option value="resignDate">퇴사일</option>
                         <option value="nationality">국적</option>
                     </select>
-                    <select id="sortDir2" class="border border-slate-200 rounded-xl px-2 py-2.5 outline-none bg-white text-xs font-bold text-blue-700">
+                    <select id="sortDir2" class="border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white text-xs font-bold text-blue-700">
                         <option value="asc">오름차순 ▲</option>
                         <option value="desc">내림차순 ▼</option>
                     </select>
@@ -215,10 +215,10 @@
             </div>
 
             <!-- 3차 정렬 기준 -->
-            <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
                 <label class="block text-slate-700 font-bold">3차 정렬 기준</label>
                 <div class="grid grid-cols-3 gap-2">
-                    <select id="sortCriteria3" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2.5 outline-none bg-white text-xs font-bold">
+                    <select id="sortCriteria3" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2 outline-none bg-white text-xs font-bold">
                         <option value="">없음</option>
                         <option value="name">성명</option>
                         <option value="dept">부서</option>
@@ -228,7 +228,49 @@
                         <option value="resignDate">퇴사일</option>
                         <option value="nationality">국적</option>
                     </select>
-                    <select id="sortDir3" class="border border-slate-200 rounded-xl px-2 py-2.5 outline-none bg-white text-xs font-bold text-blue-700">
+                    <select id="sortDir3" class="border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white text-xs font-bold text-blue-700">
+                        <option value="asc">오름차순 ▲</option>
+                        <option value="desc">내림차순 ▼</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 4차 정렬 기준 -->
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
+                <label class="block text-slate-700 font-bold">4차 정렬 기준</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <select id="sortCriteria4" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2 outline-none bg-white text-xs font-bold">
+                        <option value="">없음</option>
+                        <option value="name">성명</option>
+                        <option value="dept">부서</option>
+                        <option value="process">공정</option>
+                        <option value="rank">직급</option>
+                        <option value="hireDate">입사일</option>
+                        <option value="resignDate">퇴사일</option>
+                        <option value="nationality">국적</option>
+                    </select>
+                    <select id="sortDir4" class="border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white text-xs font-bold text-blue-700">
+                        <option value="asc">오름차순 ▲</option>
+                        <option value="desc">내림차순 ▼</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 5차 정렬 기준 -->
+            <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 space-y-1.5">
+                <label class="block text-slate-700 font-bold">5차 정렬 기준</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <select id="sortCriteria5" class="col-span-2 border border-slate-200 rounded-xl px-3 py-2 outline-none bg-white text-xs font-bold">
+                        <option value="">없음</option>
+                        <option value="name">성명</option>
+                        <option value="dept">부서</option>
+                        <option value="process">공정</option>
+                        <option value="rank">직급</option>
+                        <option value="hireDate">입사일</option>
+                        <option value="resignDate">퇴사일</option>
+                        <option value="nationality">국적</option>
+                    </select>
+                    <select id="sortDir5" class="border border-slate-200 rounded-xl px-2 py-2 outline-none bg-white text-xs font-bold text-blue-700">
                         <option value="asc">오름차순 ▲</option>
                         <option value="desc">내림차순 ▼</option>
                     </select>
@@ -239,7 +281,7 @@
                 * 부서, 공정, 직급, 국적의 사용자 지정 순서는 <b>[설정 ➔ 정렬 설정]</b>에서 변경할 수 있습니다.
             </p>
         </div>
-        <div class="flex gap-2 mt-6">
+        <div class="flex gap-2 mt-5">
             <button onclick="closeModal('sortModal')" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-xs">취소</button>
             <button onclick="applySort()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold text-xs shadow-md">정렬 적용</button>
         </div>
@@ -508,9 +550,12 @@
         excludeResigned: true
     };
 
-    // 1차·2차·3차 다중 정렬 상태
+    // 1차 ~ 5차 다중 정렬 상태
+    const SORT_LEVEL_COUNT = 5;
     let sortConfig = [
         { criteria: 'name', direction: 'asc' },
+        { criteria: '', direction: 'asc' },
+        { criteria: '', direction: 'asc' },
         { criteria: '', direction: 'asc' },
         { criteria: '', direction: 'asc' }
     ];
@@ -938,12 +983,12 @@
             document.getElementById('settingsEmpCount').innerText = (dbData.employees || []).length;
             switchSettingsTab('sort');
         } else if(modalId === 'sortModal') {
-            document.getElementById('sortCriteria1').value = sortConfig[0].criteria || 'name';
-            document.getElementById('sortDir1').value = sortConfig[0].direction || 'asc';
-            document.getElementById('sortCriteria2').value = sortConfig[1].criteria || '';
-            document.getElementById('sortDir2').value = sortConfig[1].direction || 'asc';
-            document.getElementById('sortCriteria3').value = sortConfig[2].criteria || '';
-            document.getElementById('sortDir3').value = sortConfig[2].direction || 'asc';
+            for (let i = 0; i < SORT_LEVEL_COUNT; i++) {
+                const n = i + 1;
+                const defaultCrit = i === 0 ? 'name' : '';
+                document.getElementById(`sortCriteria${n}`).value = sortConfig[i]?.criteria ?? defaultCrit;
+                document.getElementById(`sortDir${n}`).value = sortConfig[i]?.direction || 'asc';
+            }
         }
     }
 
@@ -1155,20 +1200,17 @@
     }
 
     function applySort() {
-        sortConfig = [
-            {
-                criteria: document.getElementById('sortCriteria1').value || 'name',
-                direction: document.getElementById('sortDir1').value || 'asc'
-            },
-            {
-                criteria: document.getElementById('sortCriteria2').value || '',
-                direction: document.getElementById('sortDir2').value || 'asc'
-            },
-            {
-                criteria: document.getElementById('sortCriteria3').value || '',
-                direction: document.getElementById('sortDir3').value || 'asc'
-            }
-        ];
+        const nextConfig = [];
+        for (let i = 0; i < SORT_LEVEL_COUNT; i++) {
+            const n = i + 1;
+            const crit = document.getElementById(`sortCriteria${n}`).value || '';
+            const dir = document.getElementById(`sortDir${n}`).value || 'asc';
+            nextConfig.push({
+                criteria: i === 0 ? (crit || 'name') : crit,
+                direction: dir
+            });
+        }
+        sortConfig = nextConfig;
         closeModal('sortModal');
         renderEmpTable();
     }
@@ -1229,8 +1271,8 @@
             nationality: '국적'
         };
         const activeParts = sortConfig
-            .filter(item => item.criteria)
-            .map((item, idx) => `${idx + 1}차 ${labelMap[item.criteria] || item.criteria}(${item.direction === 'desc' ? '▼' : '▲'})`);
+            .map((item, idx) => item.criteria ? `${idx + 1}차 ${labelMap[item.criteria] || item.criteria}(${item.direction === 'desc' ? '▼' : '▲'})` : null)
+            .filter(Boolean);
 
         const badge = document.getElementById('sortStatusBadge');
         if (badge) {
@@ -1267,7 +1309,7 @@
             return true;
         });
 
-        // 1차 → 2차 → 3차 순차 비교
+        // 1차 → 2차 → 3차 → 4차 → 5차 순차 비교
         list.sort((a, b) => {
             for (const rule of sortConfig) {
                 if (!rule.criteria) continue;
