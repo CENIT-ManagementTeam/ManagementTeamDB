@@ -18,7 +18,7 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .tab-btn.active { border-bottom-color: #2563eb; color: #2563eb; font-weight: 800; }
-        
+
         /* 커스텀 날짜 입력 박스 스타일 */
         .custom-date-box {
             display: inline-flex;
@@ -44,6 +44,16 @@
         .custom-date-box input::placeholder {
             color: #94a3b8;
             letter-spacing: 0.05em;
+        }
+
+        /* 드래그 피드백 */
+        .sortable-item.dragging {
+            opacity: 0.45;
+            background-color: #eff6ff;
+            border-color: #3b82f6;
+        }
+        .sortable-item.drag-over {
+            border-top: 2px solid #2563eb;
         }
     </style>
 </head>
@@ -79,12 +89,12 @@
     </div>
 </div>
 
-<!-- 상세 필터 팝업 모달 -->
+<!-- 상세 필터 팝업 모달 (다중 필터 동시 적용 + 필터 우선순위 설정) -->
 <div id="filterModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
-    <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div class="bg-white w-full max-w-xl rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         <h3 class="text-xl font-bold mb-5 text-slate-900">🔍 상세 필터 설정</h3>
         <div class="space-y-4 text-xs font-semibold">
-            
+
             <!-- 부서 -->
             <div class="relative filter-dropdown-group">
                 <label class="block text-slate-500 mb-1 font-bold">부서</label>
@@ -145,7 +155,16 @@
                 </div>
             </div>
 
-            <label class="flex items-center gap-2 cursor-pointer pt-2">
+            <!-- 필터 적용 우선순위 (드래그 & 위/아래 이동) -->
+            <div class="pt-2 border-t border-slate-100">
+                <div class="flex justify-between items-center mb-1.5">
+                    <label class="text-slate-600 font-bold">필터 우선순위 (적용·정렬 순서)</label>
+                    <span class="text-[11px] text-slate-400">드래그 또는 ▲/▼로 순서 조정</span>
+                </div>
+                <div id="filterPriorityList" class="space-y-1.5 bg-slate-50 p-2.5 rounded-2xl border border-slate-200"></div>
+            </div>
+
+            <label class="flex items-center gap-2 cursor-pointer pt-1">
                 <input type="checkbox" id="filterExcludeResigned" class="rounded border-slate-300 text-blue-600" checked>
                 <span class="text-slate-700 font-bold">재직자만 보기 (퇴사자 제외)</span>
             </label>
@@ -157,20 +176,32 @@
     </div>
 </div>
 
-<!-- 상세 정렬 팝업 모달 -->
+<!-- 상세 정렬 팝업 모달 (기준 + 오름차순/내림차순) -->
 <div id="sortModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl">
         <h3 class="text-xl font-bold mb-4 text-slate-900">📊 정렬 순서 설정</h3>
-        <div class="space-y-3 text-xs font-semibold">
-            <label class="block text-slate-500 mb-1">정렬 기준 선택</label>
-            <select id="modalSortCriteria" class="w-full border border-slate-200 rounded-xl px-3 py-3 outline-none bg-slate-50 text-sm">
-                <option value="name">성명</option>
-                <option value="dept_process">부서(공정)</option>
-                <option value="rank">직급</option>
-                <option value="hireDate">입사일</option>
-                <option value="resignDate">퇴사일</option>
-                <option value="nationality">국적</option>
-            </select>
+        <div class="space-y-4 text-xs font-semibold">
+            <div>
+                <label class="block text-slate-500 mb-1">정렬 기준 선택</label>
+                <select id="modalSortCriteria" class="w-full border border-slate-200 rounded-xl px-3 py-3 outline-none bg-slate-50 text-sm">
+                    <option value="name">성명</option>
+                    <option value="dept_process">부서(공정)</option>
+                    <option value="rank">직급</option>
+                    <option value="hireDate">입사일</option>
+                    <option value="resignDate">퇴사일</option>
+                    <option value="nationality">국적</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-slate-500 mb-1">정렬 방향</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="sortDirAscBtn" onclick="setSortDirection('asc')" class="py-2.5 rounded-xl border border-blue-600 bg-blue-600 text-white font-bold transition">오름차순 (▲)</button>
+                    <button type="button" id="sortDirDescBtn" onclick="setSortDirection('desc')" class="py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-bold transition">내림차순 (▼)</button>
+                </div>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+                * 부서, 공정, 직급, 국적의 사용자 지정 순서는 <b>[설정 ➔ 정렬 설정]</b>에서 변경할 수 있습니다.
+            </p>
         </div>
         <div class="flex gap-2 mt-6">
             <button onclick="closeModal('sortModal')" class="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-xs">취소</button>
@@ -179,11 +210,43 @@
     </div>
 </div>
 
-<!-- 환경 설정 팝업 모달 -->
+<!-- 환경 설정 팝업 모달 ('정렬 설정' 포함) -->
 <div id="settingsModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
+    <div class="bg-white w-full max-w-xl rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         <h3 class="text-xl font-bold mb-4 text-slate-900">⚙️ 시스템 설정 및 항목 관리</h3>
-        <div class="space-y-4 text-xs text-slate-600">
+
+        <!-- 설정 내 탭 메뉴 -->
+        <div class="flex gap-2 mb-4 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+            <button type="button" id="setTabSortBtn" onclick="switchSettingsTab('sort')" class="flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition">정렬 설정</button>
+            <button type="button" id="setTabInfoBtn" onclick="switchSettingsTab('info')" class="flex-1 py-2 rounded-xl text-slate-600 transition">DB 연동 정보</button>
+        </div>
+
+        <!-- 1. 정렬 설정 영역 -->
+        <div id="settingsTabSort" class="space-y-4 text-xs">
+            <div class="flex items-center justify-between gap-2">
+                <span class="font-bold text-slate-600">순서 변경 대상 항목</span>
+                <div class="flex gap-1.5">
+                    <button type="button" onclick="selectCustomOrderCategory('dept')" id="orderCat-dept" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-bold">부서</button>
+                    <button type="button" onclick="selectCustomOrderCategory('process')" id="orderCat-process" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold">공정</button>
+                    <button type="button" onclick="selectCustomOrderCategory('rank')" id="orderCat-rank" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold">직급</button>
+                    <button type="button" onclick="selectCustomOrderCategory('nationality')" id="orderCat-nationality" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold">국적</button>
+                </div>
+            </div>
+
+            <p class="text-[11px] text-slate-400">
+                직원명부 데이터에서 자동으로 불러온 목록입니다. 항목을 드래그하거나 ▲ / ▼ 버튼으로 순서를 맞추세요.
+            </p>
+
+            <div id="customOrderListContainer" class="border border-slate-200 rounded-2xl p-2.5 bg-slate-50 max-h-64 overflow-y-auto space-y-1.5"></div>
+
+            <div class="flex gap-2 pt-2">
+                <button type="button" onclick="resetCurrentCustomOrder()" class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition">기본 순서로 초기화</button>
+                <button type="button" onclick="saveCustomOrderSettings()" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold shadow-md hover:bg-blue-700 transition">정렬 순서 저장</button>
+            </div>
+        </div>
+
+        <!-- 2. DB 연동 정보 영역 -->
+        <div id="settingsTabInfo" class="hidden space-y-4 text-xs text-slate-600">
             <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
                 <p class="font-bold text-slate-800">📌 데이터베이스 연동 현황</p>
                 <p>• 연결 시트: 직원명부, 급여관리, 휴가관리, 징계/포상</p>
@@ -192,9 +255,10 @@
             </div>
             <div class="space-y-1">
                 <p class="font-bold text-slate-700">관리자 도구</p>
-                <button onclick="refreshMasterData()" class="w-full bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold hover:bg-slate-300 transition">🔄 마스터 데이터 및 부서/공정 목록 새로고침</button>
+                <button onclick="refreshMasterData()" class="w-full bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold hover:bg-slate-300 transition">🔄 마스터 데이터 및 항목 목록 새로고침</button>
             </div>
         </div>
+
         <div class="mt-6">
             <button onclick="closeModal('settingsModal')" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold text-xs">닫기</button>
         </div>
@@ -230,7 +294,7 @@
     <!-- 1. 직원명부 탭 -->
     <div id="tab-emp" class="tab-content active space-y-4">
         <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
                 <button onclick="openModal('filterModal')" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
                     🔍 필터 ▾
                 </button>
@@ -238,6 +302,7 @@
                     📊 정렬 ▾
                 </button>
                 <span id="filterStatusBadge" class="text-xs text-slate-400 font-semibold ml-2">전체 데이터 표시 중</span>
+                <span id="sortStatusBadge" class="text-xs text-blue-600 font-semibold ml-1"></span>
             </div>
             <div>
                 <button onclick="openModal('settingsModal')" class="bg-slate-900 text-white hover:bg-slate-800 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition">
@@ -395,8 +460,72 @@
     let isMasked = true;
     let currentFormMode = 'inland';
 
-    let filterState = { depts: [], processes: [], ranks: [], nationalities: [], hireStart: '', hireEnd: '', resignStart: '', resignEnd: '', excludeResigned: true };
-    let sortState = 'name';
+    // 필터 상태
+    let filterState = {
+        depts: [],
+        processes: [],
+        ranks: [],
+        nationalities: [],
+        hireStart: '',
+        hireEnd: '',
+        resignStart: '',
+        resignEnd: '',
+        excludeResigned: true
+    };
+
+    // 필터 우선순위 (적용 및 복합 정렬 기준 체인)
+    const DEFAULT_FILTER_PRIORITY = ['dept', 'rank', 'name'];
+    let filterPriority = loadFilterPriority();
+
+    // 정렬 상태 (기준 + 오름/내림차순)
+    let sortState = {
+        criteria: 'name',
+        direction: 'asc' // 'asc' | 'desc'
+    };
+
+    // 사용자 지정 순서 (부서, 공정, 직급, 국적)
+    const STORAGE_KEY_CUSTOM_ORDERS = 'cenit_custom_sort_orders_v1';
+    const STORAGE_KEY_FILTER_PRIORITY = 'cenit_filter_priority_v1';
+
+    let customOrders = loadCustomOrders();
+    let currentOrderCategory = 'dept';
+    let draftOrderList = [];
+    let draggedIndex = null;
+
+    function loadCustomOrders() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_ORDERS);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                return {
+                    dept: Array.isArray(parsed.dept) ? parsed.dept : [],
+                    process: Array.isArray(parsed.process) ? parsed.process : [],
+                    rank: Array.isArray(parsed.rank) ? parsed.rank : [],
+                    nationality: Array.isArray(parsed.nationality) ? parsed.nationality : []
+                };
+            }
+        } catch (e) {}
+        return { dept: [], process: [], rank: [], nationality: [] };
+    }
+
+    function saveCustomOrdersToStorage() {
+        localStorage.setItem(STORAGE_KEY_CUSTOM_ORDERS, JSON.stringify(customOrders));
+    }
+
+    function loadFilterPriority() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY_FILTER_PRIORITY);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch (e) {}
+        return [...DEFAULT_FILTER_PRIORITY];
+    }
+
+    function saveFilterPriorityToStorage() {
+        localStorage.setItem(STORAGE_KEY_FILTER_PRIORITY, JSON.stringify(filterPriority));
+    }
 
     // ==========================================
     // 📅 커스텀 날짜 입력기
@@ -502,6 +631,7 @@
         initCustomDateInput('date-filterResignEnd', 'filterResignEnd');
         initCustomDateInput('date-fDate', 'fDate');
         initCustomDateInput('date-fResignDate', 'fResignDate');
+        updateSortDirectionButtons();
 
         const savedUser = localStorage.getItem('cenit_logged_user');
         if(savedUser) {
@@ -532,6 +662,31 @@
     function getNormalizedNationality(emp) {
         const raw = (emp.국적 || '').trim();
         return raw === '' ? '대한민국' : raw;
+    }
+
+    function extractUniqueValuesFromEmployees(category) {
+        const setVal = new Set();
+        (dbData.employees || []).forEach(emp => {
+            if (category === 'dept' && emp.부서) setVal.add(String(emp.부서).trim());
+            else if (category === 'process' && emp.공정) setVal.add(String(emp.공정).trim());
+            else if (category === 'rank' && emp.직위) setVal.add(String(emp.직위).trim());
+            else if (category === 'nationality') setVal.add(getNormalizedNationality(emp));
+        });
+        return Array.from(setVal);
+    }
+
+    function syncCustomOrdersWithData() {
+        ['dept', 'process', 'rank', 'nationality'].forEach(cat => {
+            const existingValues = extractUniqueValuesFromEmployees(cat);
+            const savedList = customOrders[cat] || [];
+            // 기존 저장된 순서 중 현재 존재하는 값만 유지 + 새로 추가된 값 뒤에 붙이기
+            const merged = savedList.filter(v => existingValues.includes(v));
+            existingValues.forEach(v => {
+                if (!merged.includes(v)) merged.push(v);
+            });
+            customOrders[cat] = merged;
+        });
+        saveCustomOrdersToStorage();
     }
 
     function populateFilterCheckboxes() {
@@ -576,6 +731,7 @@
         fillDropdownCheckboxes('rankDropdown', ranks, 'fRankChk');
         fillDropdownCheckboxes('nationalityDropdown', nationalities, 'fNatChk');
         updateFilterDropdownSummaries();
+        renderFilterPriorityList();
     }
 
     function handleAllCheckboxChange(prefix) {
@@ -628,6 +784,198 @@
         updateSummary('fNatChk', 'nationalitySummaryText');
     }
 
+    // ==========================================
+    // 🎯 필터 우선순위 리스트 렌더링 & 이동/드래그
+    // ==========================================
+    const FILTER_PRIORITY_LABELS = {
+        dept: '부서',
+        process: '공정',
+        rank: '직급',
+        nationality: '국적',
+        name: '성명'
+    };
+
+    function renderFilterPriorityList() {
+        const container = document.getElementById('filterPriorityList');
+        if (!container) return;
+        container.innerHTML = '';
+
+        filterPriority.forEach((key, idx) => {
+            const label = FILTER_PRIORITY_LABELS[key] || key;
+            const row = document.createElement('div');
+            row.className = 'sortable-item flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-slate-200 text-xs cursor-grab';
+            row.draggable = true;
+            row.dataset.index = idx;
+
+            row.addEventListener('dragstart', () => {
+                draggedIndex = idx;
+                row.classList.add('dragging');
+            });
+            row.addEventListener('dragend', () => {
+                row.classList.remove('dragging');
+                document.querySelectorAll('#filterPriorityList .sortable-item').forEach(el => el.classList.remove('drag-over'));
+            });
+            row.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                row.classList.add('drag-over');
+            });
+            row.addEventListener('dragleave', () => {
+                row.classList.remove('drag-over');
+            });
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                row.classList.remove('drag-over');
+                if (draggedIndex !== null && draggedIndex !== idx) {
+                    const moved = filterPriority.splice(draggedIndex, 1)[0];
+                    filterPriority.splice(idx, 0, moved);
+                    draggedIndex = null;
+                    renderFilterPriorityList();
+                }
+            });
+
+            row.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400 select-none">⋮⋮</span>
+                    <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-extrabold">${idx + 1}순위</span>
+                    <span class="font-bold text-slate-800">${label}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button type="button" onclick="moveFilterPriority(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold">▲</button>
+                    <button type="button" onclick="moveFilterPriority(${idx}, 1)" ${idx === filterPriority.length - 1 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold">▼</button>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function moveFilterPriority(index, delta) {
+        const target = index + delta;
+        if (target < 0 || target >= filterPriority.length) return;
+        const temp = filterPriority[index];
+        filterPriority[index] = filterPriority[target];
+        filterPriority[target] = temp;
+        renderFilterPriorityList();
+    }
+
+    // ==========================================
+    // ⚙️ 설정 모달 내 '정렬 설정' 탭 로직
+    // ==========================================
+    function switchSettingsTab(tab) {
+        const sortTab = document.getElementById('settingsTabSort');
+        const infoTab = document.getElementById('settingsTabInfo');
+        const sortBtn = document.getElementById('setTabSortBtn');
+        const infoBtn = document.getElementById('setTabInfoBtn');
+
+        if (tab === 'sort') {
+            sortTab.classList.remove('hidden');
+            infoTab.classList.add('hidden');
+            sortBtn.className = "flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition";
+            infoBtn.className = "flex-1 py-2 rounded-xl text-slate-600 transition";
+            selectCustomOrderCategory(currentOrderCategory);
+        } else {
+            sortTab.classList.add('hidden');
+            infoTab.classList.remove('hidden');
+            infoBtn.className = "flex-1 py-2 rounded-xl bg-white text-blue-600 shadow-sm transition";
+            sortBtn.className = "flex-1 py-2 rounded-xl text-slate-600 transition";
+        }
+    }
+
+    function selectCustomOrderCategory(category) {
+        currentOrderCategory = category;
+        ['dept', 'process', 'rank', 'nationality'].forEach(cat => {
+            const btn = document.getElementById(`orderCat-${cat}`);
+            if (!btn) return;
+            if (cat === category) {
+                btn.className = "px-3 py-1.5 rounded-lg bg-blue-600 text-white font-bold";
+            } else {
+                btn.className = "px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold";
+            }
+        });
+        syncCustomOrdersWithData();
+        draftOrderList = [...(customOrders[category] || [])];
+        renderCustomOrderDraftList();
+    }
+
+    function renderCustomOrderDraftList() {
+        const container = document.getElementById('customOrderListContainer');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (!draftOrderList || draftOrderList.length === 0) {
+            container.innerHTML = `<div class="text-center text-slate-400 py-6">불러올 항목 데이터가 없습니다.</div>`;
+            return;
+        }
+
+        let dragSrcIdx = null;
+
+        draftOrderList.forEach((item, idx) => {
+            const row = document.createElement('div');
+            row.className = 'sortable-item flex items-center justify-between bg-white px-3.5 py-2.5 rounded-xl border border-slate-200 cursor-grab';
+            row.draggable = true;
+
+            row.addEventListener('dragstart', () => {
+                dragSrcIdx = idx;
+                row.classList.add('dragging');
+            });
+            row.addEventListener('dragend', () => {
+                row.classList.remove('dragging');
+                container.querySelectorAll('.sortable-item').forEach(el => el.classList.remove('drag-over'));
+            });
+            row.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                row.classList.add('drag-over');
+            });
+            row.addEventListener('dragleave', () => {
+                row.classList.remove('drag-over');
+            });
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                row.classList.remove('drag-over');
+                if (dragSrcIdx !== null && dragSrcIdx !== idx) {
+                    const moved = draftOrderList.splice(dragSrcIdx, 1)[0];
+                    draftOrderList.splice(idx, 0, moved);
+                    dragSrcIdx = null;
+                    renderCustomOrderDraftList();
+                }
+            });
+
+            row.innerHTML = `
+                <div class="flex items-center gap-2.5">
+                    <span class="text-slate-400 select-none text-sm">⋮⋮</span>
+                    <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-extrabold text-[11px]">${idx + 1}</span>
+                    <span class="font-bold text-slate-800 text-xs">${item}</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button type="button" onclick="moveDraftOrder(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold text-xs">▲</button>
+                    <button type="button" onclick="moveDraftOrder(${idx}, 1)" ${idx === draftOrderList.length - 1 ? 'disabled' : ''} class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 disabled:opacity-30 font-bold text-xs">▼</button>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    }
+
+    function moveDraftOrder(index, delta) {
+        const target = index + delta;
+        if (target < 0 || target >= draftOrderList.length) return;
+        const temp = draftOrderList[index];
+        draftOrderList[index] = draftOrderList[target];
+        draftOrderList[target] = temp;
+        renderCustomOrderDraftList();
+    }
+
+    function resetCurrentCustomOrder() {
+        const rawList = extractUniqueValuesFromEmployees(currentOrderCategory).sort((a, b) => a.localeCompare(b, 'ko'));
+        draftOrderList = rawList;
+        renderCustomOrderDraftList();
+    }
+
+    function saveCustomOrderSettings() {
+        customOrders[currentOrderCategory] = [...draftOrderList];
+        saveCustomOrdersToStorage();
+        renderEmpTable();
+        showCustomAlert('정렬 순서가 저장되었습니다.');
+    }
+
     function showLoading(text) {
         document.getElementById('loadingText').innerText = text || "처리 중...";
         document.getElementById('loadingModal').classList.add('show');
@@ -650,6 +998,12 @@
         document.getElementById(modalId).classList.add('show');
         if(modalId === 'settingsModal') {
             document.getElementById('settingsEmpCount').innerText = (dbData.employees || []).length;
+            switchSettingsTab('sort');
+        } else if(modalId === 'filterModal') {
+            renderFilterPriorityList();
+        } else if(modalId === 'sortModal') {
+            document.getElementById('modalSortCriteria').value = sortState.criteria;
+            updateSortDirectionButtons();
         }
     }
 
@@ -694,6 +1048,7 @@
             const res = await fetch(GAS_API_URL);
             dbData = await res.json();
             hideLoading();
+            syncCustomOrdersWithData();
             populateFilterCheckboxes();
             renderAllTables();
         } catch(e) {
@@ -825,7 +1180,9 @@
         filterState.resignEnd = getCustomDateValue('filterResignEnd');
         filterState.excludeResigned = document.getElementById('filterExcludeResigned').checked;
 
+        saveFilterPriorityToStorage();
         closeModal('filterModal');
+
         const isDefault =
             filterState.depts.length === 0 &&
             filterState.processes.length === 0 &&
@@ -835,7 +1192,10 @@
             !filterState.resignStart && !filterState.resignEnd &&
             filterState.excludeResigned === true;
 
-        document.getElementById('filterStatusBadge').innerText = isDefault ? "전체 데이터 표시 중" : "상세 필터 적용됨";
+        const priorityText = filterPriority.map(k => FILTER_PRIORITY_LABELS[k] || k).join(' → ');
+        document.getElementById('filterStatusBadge').innerText = isDefault
+            ? `전체 데이터 표시 중 (우선순위: ${priorityText})`
+            : `다중 필터 적용됨 (우선순위: ${priorityText})`;
         renderEmpTable();
     }
 
@@ -850,6 +1210,9 @@
         setCustomDateValue('filterHireEnd', '');
         setCustomDateValue('filterResignStart', '');
         setCustomDateValue('filterResignEnd', '');
+        filterPriority = [...DEFAULT_FILTER_PRIORITY];
+        saveFilterPriorityToStorage();
+        renderFilterPriorityList();
         updateFilterDropdownSummaries();
 
         filterState = { depts: [], processes: [], ranks: [], nationalities: [], hireStart: '', hireEnd: '', resignStart: '', resignEnd: '', excludeResigned: true };
@@ -858,21 +1221,102 @@
         renderEmpTable();
     }
 
+    function setSortDirection(dir) {
+        sortState.direction = dir;
+        updateSortDirectionButtons();
+    }
+
+    function updateSortDirectionButtons() {
+        const ascBtn = document.getElementById('sortDirAscBtn');
+        const descBtn = document.getElementById('sortDirDescBtn');
+        if (!ascBtn || !descBtn) return;
+
+        if (sortState.direction === 'asc') {
+            ascBtn.className = "py-2.5 rounded-xl border border-blue-600 bg-blue-600 text-white font-bold transition";
+            descBtn.className = "py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-bold transition";
+        } else {
+            descBtn.className = "py-2.5 rounded-xl border border-blue-600 bg-blue-600 text-white font-bold transition";
+            ascBtn.className = "py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-bold transition";
+        }
+    }
+
     function applySort() {
-        sortState = document.getElementById('modalSortCriteria').value;
+        sortState.criteria = document.getElementById('modalSortCriteria').value;
         closeModal('sortModal');
         renderEmpTable();
+    }
+
+    function getCustomOrderRank(category, val) {
+        const list = customOrders[category] || [];
+        const idx = list.indexOf(String(val || '').trim());
+        return idx === -1 ? 999999 : idx;
+    }
+
+    function compareSingleField(a, b, fieldKey, dirFactor = 1) {
+        let diff = 0;
+
+        if (fieldKey === 'name') {
+            const nameA = a['성명(한글)'] || a['사내호칭'] || a['성명(영문)'] || '';
+            const nameB = b['성명(한글)'] || b['사내호칭'] || b['성명(영문)'] || '';
+            diff = String(nameA).localeCompare(String(nameB), 'ko');
+        } else if (fieldKey === 'dept') {
+            const rankA = getCustomOrderRank('dept', a.부서);
+            const rankB = getCustomOrderRank('dept', b.부서);
+            diff = rankA !== rankB ? (rankA - rankB) : String(a.부서 || '').localeCompare(String(b.부서 || ''), 'ko');
+        } else if (fieldKey === 'process') {
+            const rankA = getCustomOrderRank('process', a.공정);
+            const rankB = getCustomOrderRank('process', b.공정);
+            diff = rankA !== rankB ? (rankA - rankB) : String(a.공정 || '').localeCompare(String(b.공정 || ''), 'ko');
+        } else if (fieldKey === 'rank') {
+            const rankA = getCustomOrderRank('rank', a.직위);
+            const rankB = getCustomOrderRank('rank', b.직위);
+            diff = rankA !== rankB ? (rankA - rankB) : String(a.직위 || '').localeCompare(String(b.직위 || ''), 'ko');
+        } else if (fieldKey === 'nationality') {
+            const natA = getNormalizedNationality(a);
+            const natB = getNormalizedNationality(b);
+            const rankA = getCustomOrderRank('nationality', natA);
+            const rankB = getCustomOrderRank('nationality', natB);
+            diff = rankA !== rankB ? (rankA - rankB) : natA.localeCompare(natB, 'ko');
+        } else if (fieldKey === 'hireDate') {
+            const dA = a.입사일 ? String(a.입사일).split('T')[0] : '';
+            const dB = b.입사일 ? String(b.입사일).split('T')[0] : '';
+            diff = dA.localeCompare(dB);
+        } else if (fieldKey === 'resignDate') {
+            const dA = a.퇴사일 ? String(a.퇴사일).split('T')[0] : '';
+            const dB = b.퇴사일 ? String(b.퇴사일).split('T')[0] : '';
+            diff = dA.localeCompare(dB);
+        }
+
+        return diff * dirFactor;
+    }
+
+    function updateSortStatusBadge() {
+        const labelMap = {
+            name: '성명',
+            dept_process: '부서(공정)',
+            rank: '직급',
+            hireDate: '입사일',
+            resignDate: '퇴사일',
+            nationality: '국적'
+        };
+        const dirText = sortState.direction === 'asc' ? '오름차순 ▲' : '내림차순 ▼';
+        const badge = document.getElementById('sortStatusBadge');
+        if (badge) {
+            badge.innerText = `[정렬: ${labelMap[sortState.criteria] || sortState.criteria} · ${dirText}]`;
+        }
     }
 
     function renderEmpTable() {
         const empBody = document.getElementById('empTableBody');
         empBody.innerHTML = '';
+        updateSortStatusBadge();
 
         if(!dbData.employees || dbData.employees.length === 0) {
             empBody.innerHTML = `<tr><td colspan="12" class="p-12 text-slate-400 text-center font-medium">데이터가 없습니다.</td></tr>`;
             return;
         }
 
+        // 다중 필터 동시 적용 (AND 조건)
         let list = dbData.employees.filter(emp => {
             if(filterState.excludeResigned && emp.재직상태 === '퇴사') return false;
 
@@ -892,24 +1336,28 @@
             return true;
         });
 
+        const dirFactor = sortState.direction === 'desc' ? -1 : 1;
+
+        // 선택된 정렬 기준 + 필터 우선순위 체인 적용
         list.sort((a, b) => {
-            if(sortState === 'name') {
-                const nameA = a['성명(한글)'] || a['사내호칭'] || a['성명(영문)'] || '';
-                const nameB = b['성명(한글)'] || b['사내호칭'] || b['성명(영문)'] || '';
-                return nameA.localeCompare(nameB, 'ko');
-            } else if(sortState === 'dept_process') {
-                const deptComp = (a.부서 || '').localeCompare(b.부서 || '', 'ko');
-                if (deptComp !== 0) return deptComp;
-                return (a.공정 || '').localeCompare(b.공정 || '', 'ko');
-            } else if(sortState === 'rank') {
-                return (a.직위 || '').localeCompare(b.직위 || '', 'ko');
-            } else if(sortState === 'hireDate') {
-                return (a.입사일 || '').localeCompare(b.입사일 || '');
-            } else if(sortState === 'resignDate') {
-                return (a.퇴사일 || '').localeCompare(b.퇴사일 || '');
-            } else if(sortState === 'nationality') {
-                return getNormalizedNationality(a).localeCompare(getNormalizedNationality(b), 'ko');
+            let primaryDiff = 0;
+            if (sortState.criteria === 'dept_process') {
+                primaryDiff = compareSingleField(a, b, 'dept', dirFactor);
+                if (primaryDiff === 0) {
+                    primaryDiff = compareSingleField(a, b, 'process', dirFactor);
+                }
+            } else {
+                primaryDiff = compareSingleField(a, b, sortState.criteria, dirFactor);
             }
+
+            if (primaryDiff !== 0) return primaryDiff;
+
+            // 동률일 경우 필터 우선순위 순서대로 2차, 3차 정렬
+            for (const pKey of filterPriority) {
+                const subDiff = compareSingleField(a, b, pKey, 1);
+                if (subDiff !== 0) return subDiff;
+            }
+            return 0;
         });
 
         if(list.length === 0) {
