@@ -79,7 +79,7 @@
     </div>
 </div>
 
-<!-- 상세 필터 팝업 모달 (클릭 시 펼쳐지는 체크박스 드롭다운 + 커스텀 날짜 입력기) -->
+<!-- 상세 필터 팝업 모달 -->
 <div id="filterModal" class="modal-box fixed inset-0 bg-slate-900/60 z-[99999] backdrop-blur-sm items-center justify-center p-4">
     <div class="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         <h3 class="text-xl font-bold mb-5 text-slate-900">🔍 상세 필터 설정</h3>
@@ -125,7 +125,7 @@
                 <div id="nationalityDropdown" class="filter-dropdown-panel hidden mt-1 border border-slate-200 rounded-xl p-2.5 max-h-40 overflow-y-auto space-y-1 bg-white shadow-lg"></div>
             </div>
 
-            <!-- 입사일 (커스텀 날짜 입력기) -->
+            <!-- 입사일 -->
             <div>
                 <label class="block text-slate-500 mb-1 font-bold">입사일</label>
                 <div class="flex items-center gap-2">
@@ -135,7 +135,7 @@
                 </div>
             </div>
 
-            <!-- 퇴사일 (커스텀 날짜 입력기) -->
+            <!-- 퇴사일 -->
             <div>
                 <label class="block text-slate-500 mb-1 font-bold">퇴사일</label>
                 <div class="flex items-center gap-2">
@@ -344,7 +344,6 @@
     <div class="bg-white w-full max-w-xl rounded-3xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
         <h3 id="formTitle" class="text-2xl font-bold mb-4 text-slate-900">직원 정보 입력</h3>
         
-        <!-- 내국인/외국인 토글 -->
         <div id="nationalityTypeToggle" class="flex gap-4 mb-6 bg-slate-100 p-1.5 rounded-2xl text-xs font-bold">
             <button type="button" onclick="setFormNationality('inland')" id="toggleInland" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white shadow-sm transition">🇰🇷 내국인 근로자</button>
             <button type="button" onclick="setFormNationality('foreigner')" id="toggleForeigner" class="flex-1 py-2.5 rounded-xl text-slate-600 transition">🌐 외국인 근로자</button>
@@ -353,11 +352,9 @@
         <div class="grid grid-cols-2 gap-4 text-xs font-semibold">
             <div><label class="block text-slate-500 mb-1">사번</label><input type="text" id="fId" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             
-            <!-- 내국인 성명 / 외국인 성명(영문) -->
             <div id="divInlandName"><label class="block text-slate-500 mb-1">성명(한글)</label><input type="text" id="fName" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div id="divForeignerName" class="hidden"><label class="block text-slate-500 mb-1">성명(영문)</label><input type="text" id="fEnglishName" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="FULL NAME"></div>
 
-            <!-- 외국인 전용 필드 (사내호칭, 국적, 비자) -->
             <div id="divForeignerNickname" class="hidden"><label class="block text-slate-500 mb-1">사내호칭</label><input type="text" id="fNickname" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div id="divForeignerNationality" class="hidden"><label class="block text-slate-500 mb-1">국적</label><input type="text" id="fNationality" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="예: 베트남"></div>
             <div id="divForeignerVisa" class="hidden"><label class="block text-slate-500 mb-1">외국인 비자</label><input type="text" id="fVisa" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="예: E-7-1"></div>
@@ -367,7 +364,6 @@
             <div><label class="block text-slate-500 mb-1">직위</label><input type="text" id="fRank" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
             <div><label class="block text-slate-500 mb-1">주민등록/외국인번호</label><input type="text" id="fRegNo" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="000000-0000000"></div>
             
-            <!-- 커스텀 날짜 입력기 (입사일 / 퇴사일) -->
             <div>
                 <label class="block text-slate-500 mb-1">입사일</label>
                 <div id="date-fDate"></div>
@@ -381,7 +377,6 @@
             <div><label class="block text-slate-500 mb-1">급여형태</label><input type="text" id="fSalaryType" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm" placeholder="시급제/연봉제"></div>
             <div><label class="block text-slate-500 mb-1">연차기준</label><select id="fAnnualBasis" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-white"><option value="입사일">입사일</option><option value="회계연도">회계연도</option></select></div>
             
-            <!-- 메모 칸 (줄바꿈 가능 텍스트에어리어) -->
             <div class="col-span-2">
                 <label class="block text-slate-500 mb-1">메모</label>
                 <textarea id="fMemo" rows="3" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm outline-none resize-none" placeholder="특이사항 및 메모 입력..."></textarea>
@@ -404,8 +399,7 @@
     let sortState = 'name';
 
     // ==========================================
-    // 📅 커스텀 날짜 입력기 생성 및 제어 함수
-    // (____년 __월 __일 표기, 4자리/2자리 자동 이동, 백스페이스 일괄 삭제)
+    // 📅 커스텀 날짜 입력기
     // ==========================================
     function initCustomDateInput(containerId, fieldId) {
         const container = document.getElementById(containerId);
@@ -426,7 +420,6 @@
         const mEl = document.getElementById(`${fieldId}_m`);
         const dEl = document.getElementById(`${fieldId}_d`);
 
-        // 숫자만 입력 허용 & 자동 포커스 이동
         yEl.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9]/g, '');
             if (this.value.length === 4) {
@@ -447,7 +440,6 @@
             this.value = this.value.replace(/[^0-9]/g, '');
         });
 
-        // 백스페이스 키 입력 시 연·월·일 한 번에 지우기
         [yEl, mEl, dEl].forEach(el => {
             el.addEventListener('keydown', function(e) {
                 if (e.key === 'Backspace') {
@@ -458,7 +450,6 @@
                     yEl.focus();
                 }
             });
-            // 개별 칸 직접 클릭 시 이벤트 전파 방지
             el.addEventListener('click', function(e) {
                 e.stopPropagation();
             });
@@ -504,7 +495,6 @@
         return '';
     }
 
-    // 페이지 로드 시 모든 날짜 필드 초기화
     window.onload = function() {
         initCustomDateInput('date-filterHireStart', 'filterHireStart');
         initCustomDateInput('date-filterHireEnd', 'filterHireEnd');
@@ -522,7 +512,7 @@
     };
 
     // ==========================================
-    // 🔽 필터 드롭다운 열기/닫기 및 요약 표시
+    // 🔽 필터 드롭다운 및 '전체' 체크박스 연동
     // ==========================================
     function toggleFilterDropdown(dropdownId) {
         const target = document.getElementById(dropdownId);
@@ -533,23 +523,98 @@
         }
     }
 
-    // 모달 내부 다른 영역 클릭 시 열린 체크박스 드롭다운 닫기
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.filter-dropdown-group')) {
             document.querySelectorAll('.filter-dropdown-panel').forEach(p => p.classList.add('hidden'));
         }
     });
 
+    function getNormalizedNationality(emp) {
+        const raw = (emp.국적 || '').trim();
+        return raw === '' ? '대한민국' : raw;
+    }
+
+    function populateFilterCheckboxes() {
+        const depts = new Set();
+        const processes = new Set();
+        const ranks = new Set();
+        const nationalities = new Set();
+
+        (dbData.employees || []).forEach(emp => {
+            if(emp.부서) depts.add(emp.부서);
+            if(emp.공정) processes.add(emp.공정);
+            if(emp.직위) ranks.add(emp.직위);
+            nationalities.add(getNormalizedNationality(emp));
+        });
+
+        const fillDropdownCheckboxes = (containerId, setVal, prefix) => {
+            const el = document.getElementById(containerId);
+            el.innerHTML = '';
+
+            el.innerHTML += `
+                <label class="flex items-center gap-2 cursor-pointer hover:bg-blue-50/70 px-2 py-1.5 rounded-lg border-b border-slate-100 mb-1 font-bold text-blue-700">
+                    <input type="checkbox" id="${prefix}_all" onchange="handleAllCheckboxChange('${prefix}')" class="rounded border-slate-300 text-blue-600" checked>
+                    <span>전체</span>
+                </label>`;
+
+            if(setVal.size === 0) {
+                el.innerHTML += `<span class="text-slate-400 text-xs px-2 py-1 block">데이터 없음</span>`;
+                return;
+            }
+
+            setVal.forEach(val => {
+                el.innerHTML += `
+                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1.5 rounded-lg">
+                        <input type="checkbox" name="${prefix}" value="${val}" onchange="handleItemCheckboxChange('${prefix}')" class="rounded border-slate-300 text-blue-600">
+                        <span class="text-slate-700">${val}</span>
+                    </label>`;
+            });
+        };
+
+        fillDropdownCheckboxes('deptDropdown', depts, 'fDeptChk');
+        fillDropdownCheckboxes('processDropdown', processes, 'fProcChk');
+        fillDropdownCheckboxes('rankDropdown', ranks, 'fRankChk');
+        fillDropdownCheckboxes('nationalityDropdown', nationalities, 'fNatChk');
+        updateFilterDropdownSummaries();
+    }
+
+    function handleAllCheckboxChange(prefix) {
+        const allCb = document.getElementById(`${prefix}_all`);
+        const items = document.querySelectorAll(`input[name="${prefix}"]`);
+
+        if (allCb.checked) {
+            items.forEach(cb => cb.checked = false);
+        } else {
+            const anyChecked = Array.from(items).some(cb => cb.checked);
+            if (!anyChecked) {
+                allCb.checked = true;
+            }
+        }
+        updateFilterDropdownSummaries();
+    }
+
+    function handleItemCheckboxChange(prefix) {
+        const allCb = document.getElementById(`${prefix}_all`);
+        const items = document.querySelectorAll(`input[name="${prefix}"]`);
+        const checkedItems = Array.from(items).filter(cb => cb.checked);
+
+        if (checkedItems.length > 0) {
+            allCb.checked = false;
+        } else {
+            allCb.checked = true;
+        }
+        updateFilterDropdownSummaries();
+    }
+
     function updateFilterDropdownSummaries() {
-        const updateSummary = (chkName, summaryId) => {
-            const all = document.querySelectorAll(`input[name="${chkName}"]`);
-            const checked = document.querySelectorAll(`input[name="${chkName}"]:checked`);
+        const updateSummary = (prefix, summaryId) => {
+            const allCb = document.getElementById(`${prefix}_all`);
+            const checked = Array.from(document.querySelectorAll(`input[name="${prefix}"]:checked`));
             const el = document.getElementById(summaryId);
             if (!el) return;
-            if (all.length === 0 || checked.length === all.length) {
+
+            if ((allCb && allCb.checked) || checked.length === 0) {
                 el.innerText = '전체';
-            } else if (checked.length === 0) {
-                el.innerText = '선택 안 됨';
             } else if (checked.length === 1) {
                 el.innerText = checked[0].value;
             } else {
@@ -643,48 +708,6 @@
         showCustomAlert('마스터 데이터가 성공적으로 갱신되었습니다.');
     }
 
-    // 국적 값 정규화 (빈 값이면 대한민국 처리)
-    function getNormalizedNationality(emp) {
-        const raw = (emp.국적 || '').trim();
-        return raw === '' ? '대한민국' : raw;
-    }
-
-    function populateFilterCheckboxes() {
-        const depts = new Set();
-        const processes = new Set();
-        const ranks = new Set();
-        const nationalities = new Set();
-
-        (dbData.employees || []).forEach(emp => {
-            if(emp.부서) depts.add(emp.부서);
-            if(emp.공정) processes.add(emp.공정);
-            if(emp.직위) ranks.add(emp.직위);
-            nationalities.add(getNormalizedNationality(emp));
-        });
-
-        const fillDropdownCheckboxes = (containerId, setVal, prefix) => {
-            const el = document.getElementById(containerId);
-            el.innerHTML = '';
-            if(setVal.size === 0) {
-                el.innerHTML = `<span class="text-slate-400 text-xs">데이터 없음</span>`;
-                return;
-            }
-            setVal.forEach(val => {
-                el.innerHTML += `
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 px-2 py-1.5 rounded-lg">
-                        <input type="checkbox" name="${prefix}" value="${val}" onchange="updateFilterDropdownSummaries()" class="rounded border-slate-300 text-blue-600" checked>
-                        <span class="text-slate-700">${val}</span>
-                    </label>`;
-            });
-        };
-
-        fillDropdownCheckboxes('deptDropdown', depts, 'fDeptChk');
-        fillDropdownCheckboxes('processDropdown', processes, 'fProcChk');
-        fillDropdownCheckboxes('rankDropdown', ranks, 'fRankChk');
-        fillDropdownCheckboxes('nationalityDropdown', nationalities, 'fNatChk');
-        updateFilterDropdownSummaries();
-    }
-
     function switchTab(tabId) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -698,7 +721,6 @@
     function renderAllTables() {
         renderEmpTable();
 
-        // 급여관리
         const salBody = document.getElementById('salaryTableBody');
         salBody.innerHTML = '';
         if(!dbData.salary || dbData.salary.length === 0) {
@@ -721,7 +743,6 @@
             });
         }
 
-        // 휴가관리
         const vacBody = document.getElementById('vacationTableBody');
         vacBody.innerHTML = '';
         if(!dbData.vacation || dbData.vacation.length === 0) {
@@ -742,7 +763,6 @@
             });
         }
 
-        // 징계/포상
         const disBody = document.getElementById('disciplineTableBody');
         disBody.innerHTML = '';
         if(!dbData.discipline || dbData.discipline.length === 0) {
@@ -789,15 +809,16 @@
     }
 
     function applyFilter() {
-        const getCheckedValues = (name) => {
-            const checkboxes = document.querySelectorAll(`input[name="${name}"]:checked`);
-            return Array.from(checkboxes).map(cb => cb.value);
+        const getSelectedFilterValues = (prefix) => {
+            const allCb = document.getElementById(`${prefix}_all`);
+            if (allCb && allCb.checked) return [];
+            return Array.from(document.querySelectorAll(`input[name="${prefix}"]:checked`)).map(cb => cb.value);
         };
 
-        filterState.depts = getCheckedValues('fDeptChk');
-        filterState.processes = getCheckedValues('fProcChk');
-        filterState.ranks = getCheckedValues('fRankChk');
-        filterState.nationalities = getCheckedValues('fNatChk');
+        filterState.depts = getSelectedFilterValues('fDeptChk');
+        filterState.processes = getSelectedFilterValues('fProcChk');
+        filterState.ranks = getSelectedFilterValues('fRankChk');
+        filterState.nationalities = getSelectedFilterValues('fNatChk');
         filterState.hireStart = getCustomDateValue('filterHireStart');
         filterState.hireEnd = getCustomDateValue('filterHireEnd');
         filterState.resignStart = getCustomDateValue('filterResignStart');
@@ -805,12 +826,26 @@
         filterState.excludeResigned = document.getElementById('filterExcludeResigned').checked;
 
         closeModal('filterModal');
-        document.getElementById('filterStatusBadge').innerText = "상세 필터 적용됨";
+        const isDefault =
+            filterState.depts.length === 0 &&
+            filterState.processes.length === 0 &&
+            filterState.ranks.length === 0 &&
+            filterState.nationalities.length === 0 &&
+            !filterState.hireStart && !filterState.hireEnd &&
+            !filterState.resignStart && !filterState.resignEnd &&
+            filterState.excludeResigned === true;
+
+        document.getElementById('filterStatusBadge').innerText = isDefault ? "전체 데이터 표시 중" : "상세 필터 적용됨";
         renderEmpTable();
     }
 
     function resetFilter() {
-        document.querySelectorAll('#filterModal input[type="checkbox"]').forEach(cb => cb.checked = true);
+        ['fDeptChk', 'fProcChk', 'fRankChk', 'fNatChk'].forEach(prefix => {
+            const allCb = document.getElementById(`${prefix}_all`);
+            if (allCb) allCb.checked = true;
+            document.querySelectorAll(`input[name="${prefix}"]`).forEach(cb => cb.checked = false);
+        });
+        document.getElementById('filterExcludeResigned').checked = true;
         setCustomDateValue('filterHireStart', '');
         setCustomDateValue('filterHireEnd', '');
         setCustomDateValue('filterResignStart', '');
@@ -841,11 +876,10 @@
         let list = dbData.employees.filter(emp => {
             if(filterState.excludeResigned && emp.재직상태 === '퇴사') return false;
 
-            // 각 필터 그룹에 체크박스가 존재할 경우 선택된 목록에 포함되는지 검사
-            if(document.querySelectorAll('input[name="fDeptChk"]').length > 0 && !filterState.depts.includes(emp.부서)) return false;
-            if(document.querySelectorAll('input[name="fProcChk"]').length > 0 && !filterState.processes.includes(emp.공정)) return false;
-            if(document.querySelectorAll('input[name="fRankChk"]').length > 0 && !filterState.ranks.includes(emp.직위)) return false;
-            if(document.querySelectorAll('input[name="fNatChk"]').length > 0 && !filterState.nationalities.includes(getNormalizedNationality(emp))) return false;
+            if(filterState.depts.length > 0 && !filterState.depts.includes(emp.부서)) return false;
+            if(filterState.processes.length > 0 && !filterState.processes.includes(emp.공정)) return false;
+            if(filterState.ranks.length > 0 && !filterState.ranks.includes(emp.직위)) return false;
+            if(filterState.nationalities.length > 0 && !filterState.nationalities.includes(getNormalizedNationality(emp))) return false;
 
             const empHire = emp.입사일 ? String(emp.입사일).split('T')[0] : '';
             const empResign = emp.퇴사일 ? String(emp.퇴사일).split('T')[0] : '';
@@ -884,7 +918,6 @@
         }
 
         list.forEach((emp) => {
-            // 외국인은 사내호칭 우선 표기, 내국인은 성명(한글) 표기
             const name = emp['성명(한글)'] || emp['사내호칭'] || emp['성명(영문)'] || '-';
             const dept = emp.부서 || '-';
             const process = emp.공정 || '-';
